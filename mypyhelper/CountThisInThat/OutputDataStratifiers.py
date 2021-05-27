@@ -106,7 +106,10 @@ class OutputDataStratifier(ABC):
         """
         Returns all keys that are suitable for output.
         """
-        return self.allKeys
+        if None in self.allKeys:
+            return sorted(self.allKeys - {None}) + [None]
+        else:
+            return sorted(self.allKeys)
 
 
 class RelativePosODS(OutputDataStratifier):
@@ -274,9 +277,7 @@ class StrandComparisonODS(OutputDataStratifier):
         Returns True and False for strand matching and mismatching and None if recording ambiguity
         """
 
-        outputKeys = [True,False]
-        if self.ambiguityHandling == AmbiguityHandling.record: outputKeys.append(None)
-        return outputKeys
+        return super().getKeysForOutput()
 
 
 class EncompassingFeatureODS(OutputDataStratifier):
@@ -384,7 +385,7 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         """
         Return the sorted list of contexts seen throughout the encompassed features.
         """
-        return sorted(super().getKeysForOutput())
+        return super().getKeysForOutput()
 
 
 class PlaceholderODS(OutputDataStratifier):
