@@ -85,6 +85,13 @@ class CounterOutputDataHandler:
         self.addNewStratifier(EncompassedFeatureContextODS(self.getNewStratificationLevelDictionaries(), outputName, contextSize, includeAlteredTo))
 
 
+    def addPlaceholderStratifier(self, outputName = "Counts"):
+        """
+        Adds a layer onto the output data structure to make sure that the last data column just contains raw counts.
+        """
+        self.addNewStratifier(PlaceholderODS(self.getNewStratificationLevelDictionaries(), outputName))
+
+
     def updateEncompassedFeature(self):
         """
         Updates all relevant values for the encompassed feature relative to the encompassing feature.

@@ -385,3 +385,28 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         Return the sorted list of contexts seen throughout the encompassed features.
         """
         return sorted(super().getKeysForOutput())
+
+
+class PlaceholderODS(OutputDataStratifier):
+    """
+    An output data stratifier which actually doesn't stratify by anything and just counts all encompassed features.
+    Useful to ensure that the previous stratifier is organized within a single column instead of rows.
+    """
+
+    def __init__(self, outputDataDictionaries, outputName = "Counts"):
+        super().__init__(AmbiguityHandling.tolerate, outputDataDictionaries, outputName=outputName)
+
+        for dictionary in self.outputDataDictionaries: dictionary[None] = 0
+        self.allKeys.add(None)
+
+    
+    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+        return
+
+
+    def getRelevantKey(self, encompassedFeature: EncompassedData):
+        return None
+
+    
+    def getKeysForOutput(self):
+        return super().getKeysForOutput()
