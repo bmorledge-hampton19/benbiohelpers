@@ -178,6 +178,8 @@ class RelativePosODS(OutputDataStratifier):
             encompassedFeature.ambiguousRelativePos = True
             return
 
+        if encompassedFeature is None: return
+
         if self.centerRelativePos:
             relativePosition = encompassedFeature.position - encompassingFeature.center
         else:
@@ -255,6 +257,8 @@ class StrandComparisonODS(OutputDataStratifier):
             encompassedFeature.ambiguousStrandMatching = True
             return
 
+        if encompassedFeature is None: return
+
         strandComparison = encompassedFeature.strand == encompassingFeature.strand
         if (encompassedFeature.matchesEncompassingDataStrand is not None and 
             encompassedFeature.matchesEncompassingDataStrand != strandComparison):
@@ -296,12 +300,27 @@ class EncompassingFeatureODS(OutputDataStratifier):
     def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Keep track of the feature encompassing the encompassed feature.
+        Also, use this to count non-encompassed features and track all encompassing features, 
+        even if they don't contain encompassed features.
         """
         if encompassingFeature is None:
             encompassedFeature.ambiguousEncompassingFeature = True
             return
 
-        if encompassedFeature is not None and encompassedFeature.encompassingFeature is not encompassingFeature:
+        if encompassedFeature is None:
+
+            # Construct the string to represent the encompassing feature's position and ID
+            encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
+                                      str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
+
+            # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+            assert encompassingFeatureStr not in self.allKeys, (
+                "2 encompassing features have the same location data: " + encompassingFeatureStr)
+            self.addKey(encompassingFeatureStr)
+
+            return
+            
+        if encompassedFeature.encompassingFeature is not encompassingFeature:
             encompassedFeature.ambiguousEncompassingFeature = True
         encompassedFeature.encompassingFeature = encompassingFeature
 
@@ -318,10 +337,6 @@ class EncompassingFeatureODS(OutputDataStratifier):
             encompassingFeature = encompassedFeature.encompassingFeature
             encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
                                       str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
-
-            # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
-            if encompassingFeatureStr not in self.allKeys:
-                self.addKey(encompassingFeatureStr)
 
             return encompassingFeatureStr
 

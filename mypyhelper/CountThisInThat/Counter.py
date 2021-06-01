@@ -53,6 +53,10 @@ class ThisInThatCounter(ABC):
         self.setUpOutputDataHandler()
         self.confirmedEncompassedFeatures: List[EncompassedData] = list()
 
+        # This is normally called within readNextEncompassingFeature, but for the first pass, the output data handler doesn't exist.
+        # So... Call it now instead!
+        self.outputDataHandler.onNewEncompassingFeature(self.currentEncompassingFeature)
+
 
     def checkForSortedInput(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath):
         """
@@ -122,6 +126,9 @@ class ThisInThatCounter(ABC):
         # Otherwise, read in the next encompassing feature.
         else:
             self.currentEncompassingFeature = self.constructEncompassingFeature(nextLine)
+            # After the first pass, make sure to send all new encompassing features to the output data handler.
+            if self.previousEncompassingFeature is not None: 
+                self.outputDataHandler.onNewEncompassingFeature(self.currentEncompassingFeature)
 
         # Check confirmed encompasssed features against the new encompassing feature.  (Unless this is the first encompassing feature)
         if self.previousEncompassingFeature is not None: self.checkConfirmedEncompassedFeatures()
