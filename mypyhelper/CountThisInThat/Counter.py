@@ -23,9 +23,9 @@ class ThisInThatCounter(ABC):
     """
 
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 
-                 outputFilePath, acceptableChromosomes = None, encompassingFeatureExtraRadius = 0,
+                 outputFilePath, acceptableChromosomes = None, checkForSortedFiles = True,
                  headersInEncompassedFeatures = False, headersInEncompassingFeatures = False,
-                 checkForSortedFiles = True):
+                 encompassingFeatureExtraRadius = 0):
 
         if checkForSortedFiles:
             self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath)
@@ -193,12 +193,16 @@ class ThisInThatCounter(ABC):
             return False
 
 
-    def isEncompassedFeatureWithinEncompassingFeature(self):
+    def isEncompassedFeatureWithinEncompassingFeature(self, encompassedFeature = None, encompassingFeature = None):
         """
-        Determines whether the current encompassed feature is within the range of the current encompassing feature.
+        Determines whether the given encompassed feature is within the range of the given encompassing feature.
+        By default (the "None" case), this function uses the current encompassed and encompassing features.
         """
-        return (self.currentEncompassedFeature.position >= self.currentEncompassingFeature.startPos - self.encompassingFeatureExtraRadius and
-                self.currentEncompassedFeature.position <= self.currentEncompassingFeature.endPos + self.encompassingFeatureExtraRadius)
+        if encompassedFeature is None: encompassedFeature = self.currentEncompassedFeature
+        if encompassingFeature is None: encompassingFeature = self.currentEncompassingFeature
+
+        return (encompassedFeature.position >= encompassingFeature.startPos - self.encompassingFeatureExtraRadius and
+                encompassedFeature.position <= encompassingFeature.endPos + self.encompassingFeatureExtraRadius)
 
 
     def checkConfirmedEncompassedFeatures(self):    
@@ -228,7 +232,7 @@ class ThisInThatCounter(ABC):
         # Next, reprocess all remaining features, provided they are not ahead of the encompassing feature's range.
         featuresToStopTracking = list()
         for feature in self.confirmedEncompassedFeatures:
-            if feature.position <= self.currentEncompassingFeature.endPos + self.encompassingFeatureExtraRadius:
+            if self.isEncompassedFeatureWithinEncompassingFeature(feature):
                 continueTracking = self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False)
                 if not continueTracking: featuresToStopTracking.append(feature)
 
