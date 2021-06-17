@@ -1,12 +1,12 @@
 # This script is testing the CountThisInThat classes by replicating my previous code that counts mutations in genic vs. intergenic regions
-from mypyhelper.CountThisInThat.OutputDataStratifiers import OutputDataStratifier
+from benbiohelpers.CountThisInThat.OutputDataStratifiers import OutputDataStratifier
 from typing import List
 
 from mutperiodpy.Tkinter_scripts.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
-from mypyhelper.CountThisInThat.Counter import ThisInThatCounter
-from mypyhelper.CountThisInThat.InputDataStructures import EncompassedDataWithContext
-from mypyhelper.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
+from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedDataWithContext
+from benbiohelpers.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
 
 
 class MutationsInGenesCounter(ThisInThatCounter):

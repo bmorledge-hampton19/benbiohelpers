@@ -3,9 +3,9 @@ from typing import List
 
 from mutperiodpy.Tkinter_scripts.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
-from mypyhelper.CountThisInThat.Counter import ThisInThatCounter
-from mypyhelper.CountThisInThat.InputDataStructures import EncompassingData
-from mypyhelper.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
+from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassingData
+from benbiohelpers.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
 
 
 class NucleosomeData(EncompassingData):

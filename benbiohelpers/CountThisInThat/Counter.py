@@ -4,8 +4,8 @@
 from abc import ABC, abstractmethod
 import warnings, subprocess
 from typing import List
-from mypyhelper.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
-from mypyhelper.CountThisInThat.CounterOutputDataHandler import CounterOutputDataHandler
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
+from benbiohelpers.CountThisInThat.CounterOutputDataHandler import CounterOutputDataHandler
 
 
 class ThisInThatCounter(ABC):

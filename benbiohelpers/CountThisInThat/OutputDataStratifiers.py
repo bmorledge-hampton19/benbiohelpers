@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict
 from enum import Enum
-from mypyhelper.CountThisInThat.InputDataStructures import *
+from benbiohelpers.CountThisInThat.InputDataStructures import *
 
 
 class AmbiguityHandling(Enum):

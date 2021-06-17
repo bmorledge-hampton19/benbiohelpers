@@ -4,9 +4,9 @@ with open("readme.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="mypyhelpers",
+    name="benbiohelpers",
     version="0.1",
-    description='Helper scripts for my use',
+    description='Helper scripts for use in various bioinformatics projects',
     long_description_content_type="text/markdown",
     url='https://github.com/bmorledge-hampton19/My_Python_Helpers',
     author='Ben Morledge-Hampton',

@@ -1,6 +1,6 @@
 # The class for parsing, formatting, and writing data from the ThisInThatCounter
-from mypyhelper.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
-from mypyhelper.CountThisInThat.OutputDataStratifiers import *
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
+from benbiohelpers.CountThisInThat.OutputDataStratifiers import *
 from typing import List
 
 
