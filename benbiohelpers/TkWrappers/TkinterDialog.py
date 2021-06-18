@@ -5,9 +5,8 @@ import tkinter.font as tkFont
 import os
 from tkinter import filedialog
 from typing import List, Dict
-from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getFilesInDirectory
-from mutperiodpy.Tkinter_scripts.MultipleFileSelector import MultipleFileSelector
-from mutperiodpy.Tkinter_scripts.DynamicSelector import DynamicSelector
+from benbiohelpers.TkWrappers.MultipleFileSelector import MultipleFileSelector
+from benbiohelpers.TkWrappers.DynamicSelector import DynamicSelector
 
 
 class TkinterDialog(tk.Frame):

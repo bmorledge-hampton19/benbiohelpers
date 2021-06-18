@@ -1,7 +1,6 @@
 # A Tk widget wich changes based on the state of a given "commander" widget.
 
 import tkinter as tk
-from tkinter import filedialog
 
 
 class DynamicSelector(tk.Frame):
@@ -81,7 +80,7 @@ class DynamicSelector(tk.Frame):
     def initDisplay(self, displayKey, selectionsID = None, row = 1, column = 0, columnSpan = 1, workingDirectory = None):
         "Creates and returns a display corresponding to the given display key, which is a controller variable state."
 
-        from mutperiodpy.Tkinter_scripts.TkinterDialog import TkinterDialog
+        from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 
         # Make sure there is no display under this identifier already.
         if displayKey in self.dynamicDisplays:

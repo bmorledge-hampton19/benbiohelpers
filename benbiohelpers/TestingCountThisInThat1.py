@@ -1,7 +1,7 @@
 # This script is testing the CountThisInThat classes by replicating my previous code that counts mutations in nucleosomes for comparison.
 from typing import List
 
-from mutperiodpy.Tkinter_scripts.TkinterDialog import TkinterDialog
+from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassingData

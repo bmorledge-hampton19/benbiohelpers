@@ -3,7 +3,7 @@
 import os
 import tkinter as tk
 from tkinter import filedialog
-from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getFilesInDirectory
+from benbiohelpers.FileSystemHandling.DirectoryHandling import getFilesInDirectory
 
 
 class MultipleFileSelector(tk.Frame):

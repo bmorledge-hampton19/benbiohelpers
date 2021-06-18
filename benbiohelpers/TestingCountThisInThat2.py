@@ -1,8 +1,5 @@
 # This script is testing the CountThisInThat classes by replicating my previous code that counts mutations in genic vs. intergenic regions
-from benbiohelpers.CountThisInThat.OutputDataStratifiers import OutputDataStratifier
-from typing import List
-
-from mutperiodpy.Tkinter_scripts.TkinterDialog import TkinterDialog
+from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedDataWithContext
