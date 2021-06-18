@@ -281,7 +281,8 @@ class StrandComparisonODS(OutputDataStratifier):
         Returns True and False for strand matching and mismatching and None if recording ambiguity
         """
 
-        return super().getKeysForOutput()
+        if None in self.allKeys: return [True, False, None]
+        else: return [True, False]
 
 
 class EncompassingFeatureODS(OutputDataStratifier):
