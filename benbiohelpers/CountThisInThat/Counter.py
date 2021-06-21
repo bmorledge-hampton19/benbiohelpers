@@ -66,13 +66,13 @@ class ThisInThatCounter(ABC):
         print("Checking input files for proper sorting...")
 
         try:
-            subprocess.check_output(("sort","-k1,1","-k2,3n", "-c", encompassedFeaturesFilePath))
+            subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassedFeaturesFilePath))
         except subprocess.CalledProcessError:
             print("EncompassedFeatures file is not properly sorted.")
             quit()
             
         try:
-            subprocess.check_output(("sort","-k1,1","-k2,3n", "-c", encompassingFeaturesFilePath))
+            subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassingFeaturesFilePath))
         except subprocess.CalledProcessError:
             print("EncompassingFeatures file is not properly sorted.")
             quit()
