@@ -54,6 +54,22 @@ class EncompassedDataWithContext(EncompassedData):
         self.alteredTo = self.choppedUpLine[4]
 
 
+class EncompassedDataDefaultStrand(EncompassedData):
+    """
+    An extension of EncompassedData which assumes that the strand is the '+' strand, either because
+    the data has no 6th column or that column does not contain strand information (like nucleosome maps)
+    """
+
+    def setLocationData(self, acceptableChromosomes):
+        self.chromosome = self.choppedUpLine[0] # The chromosome that houses the feature.
+        self.position = (float(self.choppedUpLine[1]) + float(self.choppedUpLine[2]) - 1) / 2 # The center of the feature in its chromosome. (0 base)
+        self.strand = '+'
+
+        # Make sure the mutation is in a valid chromosome.
+        if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
+            raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
+
+
 class EncompassingData:
     """
     Stores data on each of the features that are expected to be encompass the first feature
@@ -79,6 +95,25 @@ class EncompassingData:
         self.endPos = float(self.choppedUpLine[2]) - 1 # The end position of the feature in its chromosome. (0 base)
         self.center = (self.startPos + self.endPos) / 2 # The average (center) of the start and end positions.  (Still 0 base)
         self.strand = self.choppedUpLine[5] # Either '+' or '-' depending on which strand houses the mutation.
+
+        # Make sure the mutation is in a valid chromosome.
+        if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
+            raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
+
+
+class EncompassingDataDefaultStrand(EncompassingData):
+    """
+    An extension of EncompassingData which assumes that the strand is the '+' strand, either because
+    the data has no 6th column or that column does not contain strand information (like nucleosome maps)
+    """
+
+    def setLocationData(self, acceptableChromosomes):
+
+        self.chromosome = self.choppedUpLine[0] # The chromosome that houses the feature.
+        self.startPos = float(self.choppedUpLine[1]) # The start position of the feature in its chromosome. (0 base)
+        self.endPos = float(self.choppedUpLine[2]) - 1 # The end position of the feature in its chromosome. (0 base)
+        self.center = (self.startPos + self.endPos) / 2 # The average (center) of the start and end positions.  (Still 0 base)
+        self.strand = '+'
 
         # Make sure the mutation is in a valid chromosome.
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:

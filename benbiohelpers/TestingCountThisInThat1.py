@@ -4,15 +4,8 @@ from typing import List
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
-from benbiohelpers.CountThisInThat.InputDataStructures import EncompassingData
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassingDataDefaultStrand
 from benbiohelpers.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
-
-
-class NucleosomeData(EncompassingData):
-
-    def setLocationData(self, acceptableChromosomes):
-        super().setLocationData(acceptableChromosomes)
-        self.strand = '+'
 
 
 class NucleosomeCODH(CounterOutputDataHandler):
@@ -34,15 +27,18 @@ class MutationsInNucleosomesCounter(ThisInThatCounter):
                                                              outputName = "Dyad_Position")
         self.outputDataHandler.addStrandComparisonStratifier(strandAmbiguityHandling = AmbiguityHandling.tolerate)
 
-    def constructEncompassingFeature(self, line) -> NucleosomeData:
-        return NucleosomeData(line, self.acceptableChromosomes)
+    def constructEncompassingFeature(self, line) -> EncompassingDataDefaultStrand:
+        return EncompassingDataDefaultStrand(line, self.acceptableChromosomes)
+
+    def writeResults(self):
+        return super().writeResults(customStratifyingNames=(None, {True:"Plus_Strand_Counts", False:"Minus_Strand_Counts"}))
 
 
 def testingCountThisInThat1(mutationPosFilePath, nucleosomePosFilePath, outputFilePath):
 
     counter = MutationsInNucleosomesCounter(mutationPosFilePath, nucleosomePosFilePath, outputFilePath, encompassingFeatureExtraRadius=73)
     counter.count()
-    counter.writeResults((None, {True:"Plus_Strand_Counts", False:"Minus_Strand_Counts"}))
+    counter.writeResults()
 
 
 def main():
