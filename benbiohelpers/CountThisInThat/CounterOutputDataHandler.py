@@ -12,13 +12,14 @@ class CounterOutputDataHandler:
     *Places sticky note on back: "Inherit from me"*
     """
 
-    def __init__(self, countNonEncompassed = False, trackAllEncompassing = False):
+    def __init__(self):
         """
         Initialize the object by setting default values 
         """
 
-        self.countNonEncompassed = countNonEncompassed
-        self.trackAllEncompassing = trackAllEncompassing
+        # Set tracking options to False by default.
+        self.trackAllEncompassing = False
+        self.trackNonCountedEncompassed = False
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
 
@@ -76,9 +77,16 @@ class CounterOutputDataHandler:
         """
         Adds a layer onto the output data structure to stratify by encompassing features.
         """
-        assert self.trackAllEncompassing, ("Output data handler must be set up to track encompassing features (in " + 
-                                           "constructor) to utilize this stratifier.")
+        self.trackAllEncompassing = True
         self.addNewStratifier(EncompassingFeatureODS(ambiguityHandling, self.getNewStratificationLevelDictionaries(), outputName))
+
+
+    def addEncompassedFeatureStratifier(self, outputName = "Encompassed_Feature"):
+        """
+        Adds a layer onto the output data structure to stratify by encompassed features.
+        """
+        self.trackNonCountedEncompassed = True
+        self.addNewStratifier(EncompassedFeatureODS(self.getNewStratificationLevelDictionaries(), outputName))
 
 
     def addEncompassedFeatureContextStratifier(self, contextSize, includeAlteredTo, outputName = "Context"):
@@ -100,7 +108,27 @@ class CounterOutputDataHandler:
         Updates all relevant values in each ODS using the current encompassed and encompassing features.
         """
         for outputDataStratifier in self.outputDataStratifiers: 
-            outputDataStratifier.updateData(self.encompassedFeature, self.encompassingFeature)
+            outputDataStratifier.updateConfirmedEncompassedFeature(self.encompassedFeature, self.encompassingFeature)
+
+
+    def onNonCountedEncompassedFeature(self, encompassedFeature: EncompassedData):
+        """
+        If the Output Data Handler is set up to track non-counted encompassed data, do it here.
+        """
+
+        if self.trackNonCountedEncompassed:
+            for outputDataStratifier in self.outputDataStratifiers: 
+                outputDataStratifier.onNonCountedEncompassedFeature(encompassedFeature)
+
+
+    def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
+        """
+        If the Output Data Handler is set up to track all encompassing data, do it here.
+        """
+
+        if self.trackAllEncompassing:
+            for outputDataStratifier in self.outputDataStratifiers: 
+                outputDataStratifier.onNewEncompassingFeature(encompassingFeature)
 
 
     def countFeature(self):
@@ -175,32 +203,13 @@ class CounterOutputDataHandler:
         # Next, figure out whether or not the object should be counted, and whether or not it still needs to be tracked.
         countFeature, continueTracking = self.checkFeatureStatus(exitingEncompassment)
         if countFeature: self.countFeature()
+
+        # If we're no longer tracking and the feature wasn't just counted, determine if the feature was EVER counted. If not, pass it to onNonCountedEncompassedFeature().
+        # If this feature made it all the way to encompassment exiting, it WAS counted, either as the end condition of nontolerant ambiguity handling
+        # or previously due to it being fully tolerant ambiguity handling.
+        elif not continueTracking and not exitingEncompassment: self.onNonCountedEncompassedFeature(encompassedFeature)
+
         return continueTracking
-
-
-    def onNonEncompassedFeature(self, encompassedFeature: EncompassedData):
-        """
-        If the Output Data Handler is set up to count non-encompassed data, do it here.
-        """
-
-        if self.countNonEncompassed:
-            
-            self.encompassedFeature = encompassedFeature
-            self.encompassingFeature = None
-            self.updateFeatureData()
-            self.countFeature()
-
-
-    def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
-        """
-        If the Output Data Handler is set up to track all encompassing data, do it here.
-        """
-
-        if self.trackAllEncompassing:
-
-            self.encompassingFeature = encompassingFeature
-            self.encompassedFeature = None
-            self.updateFeatureData()
 
     
     def getCountDerivatives(self, previousKeys, getHeaders = False) -> List[str]:

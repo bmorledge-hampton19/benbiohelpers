@@ -87,7 +87,7 @@ class ThisInThatCounter(ABC):
 
         # Was the last feature actually encompassed? If not, pass it to the output data structure to be handled.
         if self.currentEncompassedFeature is not None and not self.isCurrentEncompassedFeatureActuallyEncompassed:
-            self.outputDataHandler.onNonEncompassedFeature(self.currentEncompassedFeature)
+            self.outputDataHandler.onNonCountedEncompassedFeature(self.currentEncompassedFeature)
         self.isCurrentEncompassedFeatureActuallyEncompassed = False
 
         # Read in the next line.

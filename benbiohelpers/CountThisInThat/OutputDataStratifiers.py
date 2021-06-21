@@ -10,7 +10,6 @@ class AmbiguityHandling(Enum):
     """
     How is ambiguity handled?
     """
-
     tolerate = 0 # Encompassed features are recorded multiple times with the relevant value in each situation, regardless of ambiguity
     ignore = 1 # Ambiguous entries are discarded.  Non-ambiguous entries are recorded once.
     record = 2 # Ambiguous entries are recorded as such.  Non-ambiguous entries are recorded once.
@@ -30,7 +29,6 @@ class OutputDataStratifier(ABC):
         """
         Initializes the object by setting default values using the given parameters.
         """
-
         self.ambiguityHandling = ambiguityHandling # See related enum
         self.outputDataDictionaries: List[Dict] = outputDataDictionaries
         self.allKeys = set()
@@ -87,9 +85,19 @@ class OutputDataStratifier(ABC):
 
 
     @abstractmethod
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Update the given encompassed data as necessary to retrieve a key from it later.
+        """
+
+    def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
+        """
+        Actions to take (if any) when given a new encompassing feature and no encompassed feature.
+        """
+
+    def onNonCountedEncompassedFeature(self, encompassedFeature: EncompassedData):
+        """
+        Actions to take (if any) when given an encompassed feature that was never actually encompassed.
         """
 
     
@@ -125,8 +133,6 @@ class RelativePosODS(OutputDataStratifier):
         If prepForHalfBases is true, half positions are incorporated into the dictionary (but may not be incorporated into final output).
         extraRangeRadius adds 2*[value] positions to the given range. 
         """
-
-
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName)
 
         # Set important class variables
@@ -169,17 +175,10 @@ class RelativePosODS(OutputDataStratifier):
         self.relativePosHalfPositions = set(self.relativePosHalfPositions)
 
 
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Checks the position of the encompassed feature relative to the encompassing feature.
         """
-        
-        if encompassingFeature is None:
-            encompassedFeature.ambiguousRelativePos = True
-            return
-
-        if encompassedFeature is None: return
-
         if self.centerRelativePos:
             relativePosition = encompassedFeature.position - encompassingFeature.center
         else:
@@ -195,8 +194,7 @@ class RelativePosODS(OutputDataStratifier):
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
         Gets the position of the encompassed feature relative to its encompassing feature as the key.
-        """
-        
+        """       
         if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousRelativePos:
 
             # We also need to keep track of whether or half and int positions have been used at least once.
@@ -216,7 +214,6 @@ class RelativePosODS(OutputDataStratifier):
         Int and half values are only used if the relevant category has been accessed at least one.
         If neither has been accessed, int values are returned.
         """
-
         if self.usedHalfPosition and self.usedIntPosition:
             outputKeys = self.relativePosIntPositions | self.relativePosHalfPositions
         elif self.usedHalfPosition:
@@ -239,7 +236,6 @@ class StrandComparisonODS(OutputDataStratifier):
         """
         Pretty basic setup.
         """
-
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName)
 
         for dictionary in self.outputDataDictionaries:
@@ -248,17 +244,10 @@ class StrandComparisonODS(OutputDataStratifier):
         self.allKeys.update((True, False))
         
 
-
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Checks the difference between strands on the current encompassed and encompassing features.
         """
-        if encompassingFeature is None:
-            encompassedFeature.ambiguousStrandMatching = True
-            return
-
-        if encompassedFeature is None: return
-
         strandComparison = encompassedFeature.strand == encompassingFeature.strand
         if (encompassedFeature.matchesEncompassingDataStrand is not None and 
             encompassedFeature.matchesEncompassingDataStrand != strandComparison):
@@ -270,7 +259,6 @@ class StrandComparisonODS(OutputDataStratifier):
         """
         Returns whether or not the strand of the encompassed feature matches its encompassing feature.
         """
-
         if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousStrandMatching:
             return encompassedFeature.matchesEncompassingDataStrand
         else: return None
@@ -280,7 +268,6 @@ class StrandComparisonODS(OutputDataStratifier):
         """
         Returns True and False for strand matching and mismatching and None if recording ambiguity
         """
-
         if None in self.allKeys: return [True, False, None]
         else: return [True, False]
 
@@ -298,40 +285,34 @@ class EncompassingFeatureODS(OutputDataStratifier):
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
 
 
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Keep track of the feature encompassing the encompassed feature.
         Also, use this to count non-encompassed features and track all encompassing features, 
         even if they don't contain encompassed features.
         """
-        if encompassingFeature is None:
-            encompassedFeature.ambiguousEncompassingFeature = True
-            return
-
-        if encompassedFeature is None:
-
-            # Construct the string to represent the encompassing feature's position and ID
-            encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
-                                      str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
-
-            # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
-            assert encompassingFeatureStr not in self.allKeys, (
-                "2 encompassing features have the same location data: " + encompassingFeatureStr)
-            self.addKey(encompassingFeatureStr)
-
-            return
-            
         if encompassedFeature.encompassingFeature is not encompassingFeature:
             encompassedFeature.ambiguousEncompassingFeature = True
         encompassedFeature.encompassingFeature = encompassingFeature
+
+
+    def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
+        """
+        Create a new key based on the position ID of the new encompassing feature and add it to the set.
+        """
+        encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
+                                    str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
+
+        # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+        assert encompassingFeatureStr not in self.allKeys, (
+            "2 encompassing features have the same location data: " + encompassingFeatureStr)
+        self.addKey(encompassingFeatureStr)
 
     
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
         Format the position of the encompassing feature as a string and pass it back as a key.
-        Also, check to see if the key has been seen before, and if not, initialize the dictionaries with it.
         """
-
         if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousEncompassingFeature:
 
             # Construct the string to represent the encompassing feature's position and ID
@@ -342,6 +323,53 @@ class EncompassingFeatureODS(OutputDataStratifier):
             return encompassingFeatureStr
 
         else: return None
+
+
+    def getKeysForOutput(self):
+        return super().getKeysForOutput()
+
+
+class EncompassedFeatureODS(OutputDataStratifier):
+    """
+    Stratifies the output data structure by the position of encompassed features.
+    """
+    
+    def __init__(self, outputDataDictionaries, outputName):
+        """
+        Ambiguity handling is forced to be tolerant as there can be no ambiguity as to an encompassed data's own identity.
+        All keys cannot be pre-determined and are added as they are encountered.
+        """
+        super().__init__(AmbiguityHandling.tolerate, outputDataDictionaries, outputName=outputName)
+
+
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+        """
+        There's nothing to update since the encompassed feature's position ID is an intrinsic property.
+        """
+
+
+    def onNonCountedEncompassedFeature(self, encompassedFeature: EncompassedData):
+        """
+        Create a new key based on the position ID of the non-encompassed feature and add it to the set.
+        This ensures that all encompassed features are properly tracked.
+        """
+        encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
+
+        # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+        if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
+
+    
+    def getRelevantKey(self, encompassedFeature: EncompassedData):
+        """
+        Format the position of the encompassed feature as a string and pass it back as a key.
+        Also, check to see if the key has been seen before, and if not, add it.
+        """
+        encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
+
+        # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+        if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
+
+        return encompassedFeatureStr
 
 
     def getKeysForOutput(self):
@@ -364,7 +392,7 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         self.includeAlteredTo = includeAlteredTo
 
 
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Nothing to update!  The context is an intrinsic property of the encompassed feature.
         """
@@ -417,7 +445,7 @@ class PlaceholderODS(OutputDataStratifier):
         self.allKeys.add(None)
 
     
-    def updateData(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         return
 
 
