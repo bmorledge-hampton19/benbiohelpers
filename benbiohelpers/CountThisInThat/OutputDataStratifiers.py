@@ -48,6 +48,7 @@ class OutputDataStratifier(ABC):
         self.ambiguityHandling = ambiguityHandling # See related enum
         self.outputDataDictionaries: List[Dict] = outputDataDictionaries
         self.allKeys = set()
+        self.keysFormattedForOutput = None
         self.outputName = outputName
         self.childDataStratifier: OutputDataStratifier = None
 
@@ -126,14 +127,25 @@ class OutputDataStratifier(ABC):
 
     
     @abstractmethod
-    def getKeysForOutput(self):
+    def formatKeysForOutput(self):
         """
-        Returns all keys that are suitable for output.
+        A function which implements some functionality previously handled by getKeysForOutput by
+        returning a list of keys properly formatted for output.  This function is defined separately
+        and only called once since getKeysForOutput may be called many times, but formatting the keys
+        may be computationally expensive.
         """
         if None in self.allKeys:
             return sorted(self.allKeys - {None}) + [None]
         else:
             return sorted(self.allKeys)
+
+
+    def getKeysForOutput(self):
+        """
+        Returns all keys that are suitable for output.
+        """
+        if self.keysFormattedForOutput is None: self.keysFormattedForOutput = self.formatKeysForOutput()
+        return self.keysFormattedForOutput
 
 
 class RelativePosODS(OutputDataStratifier):
@@ -224,7 +236,7 @@ class RelativePosODS(OutputDataStratifier):
         else: return None
 
         
-    def getKeysForOutput(self):
+    def formatKeysForOutput(self):
         """
         Returns the positions as keys for output, sorted numerically.
         Int and half values are only used if the relevant category has been accessed at least one.
@@ -280,7 +292,7 @@ class StrandComparisonODS(OutputDataStratifier):
         else: return None
 
 
-    def getKeysForOutput(self):
+    def formatKeysForOutput(self):
         """
         Returns True and False for strand matching and mismatching and None if recording ambiguity
         """
@@ -341,8 +353,14 @@ class EncompassingFeatureODS(OutputDataStratifier):
         else: return None
 
 
-    def getKeysForOutput(self):
-        return super().getKeysForOutput()
+    def formatKeysForOutput(self):
+        """
+        Use the position ID sorting function.
+        """
+        if None in self.allKeys:
+            return sortPositionIDs(list(self.allKeys-{None})) + [None]
+        else:
+            return sortPositionIDs(list(self.allKeys))
 
 
 class EncompassedFeatureODS(OutputDataStratifier):
@@ -388,8 +406,12 @@ class EncompassedFeatureODS(OutputDataStratifier):
         return encompassedFeatureStr
 
 
-    def getKeysForOutput(self):
-        return super().getKeysForOutput()
+    def formatKeysForOutput(self):
+        """
+        Use the position ID sorting function.
+        NOTE: Is it possible that the position IDs are guaranteed to be sorted due to inputs being sorted?  This may merit further investigation...
+        """
+        return sortPositionIDs(list(self.allKeys))
 
 
 class EncompassedFeatureContextODS(OutputDataStratifier):
@@ -441,11 +463,11 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         return context
 
     
-    def getKeysForOutput(self):
+    def formatKeysForOutput(self):
         """
         Return the sorted list of contexts seen throughout the encompassed features.
         """
-        return super().getKeysForOutput()
+        return super().formatKeysForOutput()
 
 
 class PlaceholderODS(OutputDataStratifier):
@@ -469,5 +491,5 @@ class PlaceholderODS(OutputDataStratifier):
         return None
 
     
-    def getKeysForOutput(self):
-        return super().getKeysForOutput()
+    def formatKeysForOutput(self):
+        return super().formatKeysForOutput()
