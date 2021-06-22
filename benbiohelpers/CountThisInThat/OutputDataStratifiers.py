@@ -15,6 +15,22 @@ class AmbiguityHandling(Enum):
     record = 2 # Ambiguous entries are recorded as such.  Non-ambiguous entries are recorded once.
 
 
+# Sorts the position IDs derived from the Encompassed Data and Encompassing Data ODS's
+def sortPositionIDs(positionIDs: List[str]):
+
+    # If both start and end positions are given (Represented by a '-' between positions, before the strand designation), sort on end position first
+    if '-' in positionIDs[0].split('(')[0]:
+        positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split('-')[1]))
+
+    # Next, sort on the first (potentially only) given position.
+    positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split(':')[1].split('-')[0]))
+
+    # Finally, sort on the chromosome identifier.
+    positionIDs.sort(key = lambda positionID: positionID.split(':')[0])
+
+    return positionIDs # Do this as a formality, even though this sorts in place (I think).
+
+
 class OutputDataStratifier(ABC):
     """
     This is an abstract class used to build the "layers" of the output data structure.
