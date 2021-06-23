@@ -23,12 +23,11 @@ class ThisInThatCounter(ABC):
     """
 
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 
-                 outputFilePath, acceptableChromosomes = None, checkForSortedFiles = True,
+                 outputFilePath, acceptableChromosomes = None, checkForSortedFiles = (True,True),
                  headersInEncompassedFeatures = False, headersInEncompassingFeatures = False,
                  encompassingFeatureExtraRadius = 0):
 
-        if checkForSortedFiles:
-            self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath)
+        self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath, checkForSortedFiles)
 
         # Open the encompassed and encompassing files to compare against one another.
         self.encompassedFeaturesFile = open(encompassedFeaturesFilePath, 'r')
@@ -58,26 +57,30 @@ class ThisInThatCounter(ABC):
         self.outputDataHandler.onNewEncompassingFeature(self.currentEncompassingFeature)
 
 
-    def checkForSortedInput(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath):
+    def checkForSortedInput(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, checkForSortedFiles):
         """
         Ensures that the two given files are properly sorted.
         Files should be sorted by the first column alphabetically followed by the next two columns numerically
+        The checkForSortedFiles parameter should be a two-item tuple containing boolean values telling whether to
+        check the encompassed and encompassing feature files respectively.
         """
         print("Checking input files for proper sorting...")
 
-        try:
-            subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassedFeaturesFilePath))
-        except subprocess.CalledProcessError:
-            print("EncompassedFeatures file is not properly sorted.")
-            quit()
+        if checkForSortedFiles[0]:
+            print("Checking encompassed features file for proper sorting...")
+            try:
+                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassedFeaturesFilePath))
+            except subprocess.CalledProcessError:
+                print("Encompassed features file is not properly sorted.")
+                quit()
             
-        try:
-            subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassingFeaturesFilePath))
-        except subprocess.CalledProcessError:
-            print("EncompassingFeatures file is not properly sorted.")
-            quit()
-
-        print("Files are properly sorted.")
+        if checkForSortedFiles[1]:
+            print("Checking encompassing features file for proper sorting...")
+            try:
+                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassingFeaturesFilePath))
+            except subprocess.CalledProcessError:
+                print("Encompassing features file is not properly sorted.")
+                quit()
 
 
     def readNextEncompassedFeature(self):
