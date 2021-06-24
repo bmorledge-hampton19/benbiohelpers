@@ -132,6 +132,10 @@ class ThisInThatCounter(ABC):
             # After the first pass, make sure to send all new encompassing features to the output data handler.
             if self.previousEncompassingFeature is not None: 
                 self.outputDataHandler.onNewEncompassingFeature(self.currentEncompassingFeature)
+            # Inform the user every time a new chromosome is encountered in an encompassing feature
+            if (self.previousEncompassingFeature is None 
+                or self.previousEncompassingFeature.chromosome != self.currentEncompassingFeature.chromosome):
+                print("Counting in",self.currentEncompassingFeature.chromosome)
 
         # Check confirmed encompasssed features against the new encompassing feature.  (Unless this is the first encompassing feature)
         if self.previousEncompassingFeature is not None: self.checkConfirmedEncompassedFeatures()
@@ -161,24 +165,11 @@ class ThisInThatCounter(ABC):
         Takes an encompassed object and encompassing object which have unequal chromosomes and reads through data until they are equal.
         """
 
-        chromosomeChanged = False # A simple flag to determine when to inform the user that a new chromosome is being accessed
-
         # Until the chromosomes are the same for both mutations and genes, read through the one with the eariler chromosome.
         while (self.currentEncompassedFeature is not None and self.currentEncompassingFeature is not None and 
                self.currentEncompassedFeature.chromosome != self.currentEncompassingFeature.chromosome):
-            chromosomeChanged = True
             if self.currentEncompassedFeature.chromosome < self.currentEncompassingFeature.chromosome: self.readNextEncompassedFeature()
             else: self.readNextEncompassingFeature()
-
-        if chromosomeChanged and self.currentEncompassingFeature is not None and self.currentEncompassedFeature is not None: 
-            self.printNewChromosomeMessage()
-
-
-    def printNewChromosomeMessage(self):
-        """
-        Prints a message based on the current chromosome.  To be used when the current encompassing feature is in a new chromosome.
-        """
-        print("Counting in",self.currentEncompassingFeature.chromosome)
 
 
     def isEncompassedFeaturePastEncompassingFeature(self):
@@ -251,8 +242,6 @@ class ThisInThatCounter(ABC):
         # Double check the chromosomes in our features to make sure they are aligned and we don't have empty files.
         if self.currentEncompassedFeature is None or self.currentEncompassingFeature is None:
             warnings.warn("Empty file(s) given as input.  Output will most likely be unhelpful.")
-        elif self.currentEncompassingFeature.chromosome == self.currentEncompassedFeature.chromosome: 
-            self.printNewChromosomeMessage()
         else: self.reconcileChromosomes()
 
         # The core loop goes through each encompassing feature, one at a time, and checks encompassed feature positions against it until 
