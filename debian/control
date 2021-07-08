@@ -1,0 +1,12 @@
+Source: python3-benbiohelpers
+Maintainer: Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>
+Build-Depends: debhelper (>= 11.0.0),dh-python,python3-all,python3-setuptools
+Section: python
+Priority: optional
+Standards-Version: 3.9.6
+X-Python3-Version: >= 3.7
+
+Package: python3-benbiohelpers
+Architecture: all
+Description: A collection of scripts for general use in bioinformatics projects.
+Depends: ${python3:Depends}, ${misc:Depends}

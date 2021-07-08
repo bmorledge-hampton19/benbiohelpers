@@ -1,0 +1,11 @@
+python3-benbiohelpers (1.0-0ubuntu2) focal; urgency=low
+
+  * Fixed build error where setup.py had the wrong path to the readme file
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 08 Jul 2021 09:16:11 -0700
+
+python3-benbiohelpers (1.0) focal; urgency=low
+
+  * Initial release alongside mutperiod 0.7.0
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Wed, 07 Jul 2021 20:40:45 -0700
