@@ -13,5 +13,6 @@ setup(
     author_email='b.morledge-hampton@wsu.edu',
     license='MIT',
     python_requires='>=3.7',
-    packages=find_packages()
+    packages=find_packages(),
+    package_data={"benbiohelpers": ["TkWrappers/test_tube.png"]}
 )
