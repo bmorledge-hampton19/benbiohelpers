@@ -389,7 +389,7 @@ class EncompassedFeatureODS(OutputDataStratifier):
         """
         encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
 
-        # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+        # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
         if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
 
     
@@ -400,7 +400,7 @@ class EncompassedFeatureODS(OutputDataStratifier):
         """
         encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
 
-        # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
+        # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
         if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
 
         return encompassedFeatureStr
