@@ -1,3 +1,10 @@
+python3-benbiohelpers (1.0-0ubuntu3) focal; urgency=low
+
+  * Fixed misnamed __init__.py file in TkWrappers
+  * Added test tube image for TkWrappers to package data in setup.py
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 08 Jul 2021 12:30:10 -0700
+
 python3-benbiohelpers (1.0-0ubuntu2) focal; urgency=low
 
   * Fixed build error where setup.py had the wrong path to the readme file
