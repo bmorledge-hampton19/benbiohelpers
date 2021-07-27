@@ -223,6 +223,11 @@ class CounterOutputDataHandler:
         """
         return list()
 
+    ENCOMPASSED_FEATURE = 1
+    ENCOMPASSING_FEATURE = 2
+    def writeFeature(encompassedData: EncompassedData = None, encompassingData: EncompassingData = None):
+        pass
+
 
     def writeResults(self, outputFilePath, customStratifyingNames = None):
         """

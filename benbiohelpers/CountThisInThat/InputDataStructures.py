@@ -41,6 +41,8 @@ class EncompassedData:
         self.ambiguousRelativePos = False # Whether or not there is ambiguity due to different relative positions on multiple encompassing data features.
         self.ambiguousEncompassingFeature = False # Whether or not there is ambiguity due to multiple encompassing features.
 
+        self.finishedTracking = False # Changes to true when there is certainty that this object will not be updated again.
+
 
 class EncompassedDataWithContext(EncompassedData):
     """
