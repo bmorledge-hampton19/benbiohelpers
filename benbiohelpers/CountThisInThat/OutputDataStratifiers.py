@@ -1,7 +1,8 @@
 # This script contains an abstract class as well as its children that represent different ways the 
 # output data structure from the CounterOutputDataHandler can be stratified.
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from benbiohelpers.CountThisInThat.SupplementalInformation import SUP_INFO_KEY, SupplementalInformation, SupplementalInformationHandler
+from typing import List, Dict, Tuple, Union
 from enum import Enum
 from benbiohelpers.CountThisInThat.InputDataStructures import *
 
@@ -15,20 +16,37 @@ class AmbiguityHandling(Enum):
     record = 2 # Ambiguous entries are recorded as such.  Non-ambiguous entries are recorded once.
 
 
-# Sorts the position IDs derived from the Encompassed Data and Encompassing Data ODS's
-def sortPositionIDs(positionIDs: List[str]):
+def sortPositionIDs(positionIDs: Union[List[str], List[Tuple]]):
+    """
+    Sorts the position IDs derived from the Encompassed Data and Encompassing Data ODS's.
+    Can handle input as a list of strings or tuples, and with a single position or both a start and end position.
+    However, it is assumed that all members of the list are formatted the same with respect to the above variations.
+    """
 
-    # If both start and end positions are given (Represented by a '-' between positions, before the strand designation), sort on end position first
-    if '-' in positionIDs[0].split('(')[0]:
-        positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split('-')[1]))
+    # Sorting for list of strings:
+    if isinstance(positionIDs[0], str):
 
-    # Next, sort on the first (potentially only) given position.
-    positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split(':')[1].split('-')[0]))
+        # If both start and end positions are given (Represented by a '-' between positions, before the strand designation), sort on end position first
+        if '-' in positionIDs[0].split('(')[0]:
+            positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split('-')[1]))
 
-    # Finally, sort on the chromosome identifier.
-    positionIDs.sort(key = lambda positionID: positionID.split(':')[0])
+        # Next, sort on the first (potentially only) given position.
+        positionIDs.sort(key = lambda positionID: float(positionID.split('(')[0].split(':')[1].split('-')[0]))
 
-    return positionIDs # Do this as a formality, even though this sorts in place (I think).
+        # Finally, sort on the chromosome identifier.
+        positionIDs.sort(key = lambda positionID: positionID.split(':')[0])
+
+        return positionIDs # Do this as a formality, even though this sorts in place (I think).
+
+    # Otherwise, assume we have some iterable.
+    else:
+
+        # If the iterable has 4 items, sort on item 3 first, which represents the end position
+        if len(positionIDs[0]) == 4: positionIDs.sort(key = lambda positionID: positionID[2])
+
+        # Next, sort by the start position and then the chromosome
+        positionIDs.sort(key = lambda positionID: positionID[1])
+        positionIDs.sort(key = lambda positionID: positionID[0])
 
 
 class OutputDataStratifier(ABC):
@@ -48,57 +66,101 @@ class OutputDataStratifier(ABC):
         self.ambiguityHandling = ambiguityHandling # See related enum
         self.outputDataDictionaries: List[Dict] = outputDataDictionaries
         self.allKeys = set()
+        self.sortedKeys = None
         self.keysFormattedForOutput = None
         self.outputName = outputName
         self.childDataStratifier: OutputDataStratifier = None
+        self.supplementalInfoHandlers: List[SupplementalInformationHandler] = list()
 
         if self.ambiguityHandling == AmbiguityHandling.record:
             for dictionary in self.outputDataDictionaries: dictionary[None] = 0
             self.allKeys.add(None)
 
 
+    def addSuplementalInfo(self, supplementalInfoHandler: SupplementalInformationHandler):
+        """
+        Adds supplemental information to the child stratifier's dictionaries (so that the data
+        is stratified by this stratifier's condition as well.)
+        Also initializes supplemental information for all child dictionaries.
+        """
+        self.supplementalInfoHandlers.append(supplementalInfoHandler)
+        for dictionary in self.childDataStratifier.outputDataDictionaries:
+            if len(self.supplementalInfoHandlers) == 1: dictionary[SUP_INFO_KEY] = list()
+            dictionary[SUP_INFO_KEY].append(supplementalInfoHandler.initializeSupplementalInfo())
+
+
+    def initializeChildDictionaries(self, dictionary, keys):
+        """
+        Given a dictionary and a list of keys,
+        Initialize the dictionaries and return them in a list.
+        """
+        newChildDictionaries = list()
+
+        for key in keys:
+            dictionary[key] = dict()
+            newChildDictionaries.append(dictionary[key])
+
+        if len(self.supplementalInfoHandlers > 0):
+            for key in keys:
+                dictionary[key][SUP_INFO_KEY] = list()
+                for supplementalInfoHandler in self.supplementalInfoHandlers:
+                    dictionary[key][SUP_INFO_KEY].append(supplementalInfoHandler.initializeSupplementalInfo())
+
+        return newChildDictionaries
+
+
     def addDictionaries(self, dictionaries: List[Dict]):
         """
         Initializes the given (empty) dictionaries using the keys already present in the current dictionaries,
         and adds them to the list of outputDataDictionaries.
-        Also checks to see if there are any child data stratifiers that need to add further dictionaries.
+        Also initializes any supplemental information.
+        Finally, checks to see if there are any child data stratifiers that need to add further dictionaries.
         """
-        childDictionaries = list()
+        newChildDictionaries = list()
         hasChildStratifier = self.childDataStratifier is not None
 
         for dictionary in dictionaries:
 
             self.outputDataDictionaries.append(dictionary)
-            
-            for key in self.allKeys:
                 
-                if hasChildStratifier:
-                    dictionary[key] = dict()
-                    childDictionaries.append(dictionary[key])
-                else: dictionary[key] = 0
+            if hasChildStratifier:
+                newChildDictionaries.extend(self.initializeChildDictionaries(dictionary))
+            else: 
+                for key in self.allKeys: dictionary[key] = 0
 
-        if hasChildStratifier: self.childDataStratifier.addDictionaries(childDictionaries)
+        if hasChildStratifier: 
+            self.childDataStratifier.addDictionaries(newChildDictionaries)
 
 
-    def addKey(self, key):
+    def attemptAddKey(self, key):
         """
-        Adds the key to all of the dictionaries in outputDataDictionaries.  
+        Adds the key to all of the dictionaries in outputDataDictionaries, if it isn't already present.  
         Then, if this stratifier has any child stratifiers, creates new dictionaries at that key and passes them down through addDictionaries.
+        Also initializes supplemental information for all child dictionaries.
         """
-        assert key not in self.allKeys, "Key: " + str(key) + " already exists.  Adding would overwrite current dictionaries."
+        assert key is SUP_INFO_KEY or key != SUP_INFO_KEY, "Collision with SUP_INFO_Key"
 
-        childDictionaries = list()
+        if key in self.allKeys:
+            self.onKeyAlreadyPresent(key)
+            return
+
+        newChildDictionaries = list()
         hasChildStratifier = self.childDataStratifier is not None
         self.allKeys.add(key)
 
         for dictionary in self.outputDataDictionaries:
 
-            if hasChildStratifier:
-                dictionary[key] = dict()
-                childDictionaries.append(dictionary[key])
+            if hasChildStratifier: newChildDictionaries.extend(self.initializeChildDictionaries(dictionary, (key,)))
             else: dictionary[key] = 0
 
-        if hasChildStratifier: self.childDataStratifier.addDictionaries(childDictionaries)
+        if hasChildStratifier: self.childDataStratifier.addDictionaries(newChildDictionaries)
+
+
+    def onKeyAlreadyPresent(self, key):
+        """
+        What should be done if the key is already present and couldn't be added?
+        (Not an abstract function, because I think it'll be pretty common to put nothing here.)
+        """
 
 
     @abstractmethod
@@ -127,11 +189,11 @@ class OutputDataStratifier(ABC):
 
     
     @abstractmethod
-    def formatKeysForOutput(self):
+    def getSortedKeysForOutput(self):
         """
         A function which implements some functionality previously handled by getKeysForOutput by
-        returning a list of keys properly formatted for output.  This function is defined separately
-        and only called once since getKeysForOutput may be called many times, but formatting the keys
+        sorting the list of keys properly formatted for output.  This function is defined separately
+        and only called once since getKeysForOutput may be called many times, but sorting the keys
         may be computationally expensive.
         """
         if None in self.allKeys:
@@ -140,12 +202,37 @@ class OutputDataStratifier(ABC):
             return sorted(self.allKeys)
 
 
+    @abstractmethod
+    def formatKeyForOutput(self, key):
+        """
+        Performs any formatting necessary to prepare the key for output. (String casting does NOT need to occur here.)
+        """
+        return key
+
+
     def getKeysForOutput(self):
         """
         Returns all keys that are suitable for output.
         """
-        if self.keysFormattedForOutput is None: self.keysFormattedForOutput = self.formatKeysForOutput()
+        if self.sortedKeys is None: self.sortedKeys = self.getSortedKeysForOutput
+        if self.keysFormattedForOutput is None: self.keysFormattedForOutput = (self.formatKeyForOutput(key) for key in self.sortedKeys)
         return self.keysFormattedForOutput
+
+    
+    def getSupplementalInfoOutput(self):
+        """
+        Returns a (potentially empty) list of lists of outputs for each supplemental information handler in the ODS
+        Each output in the list corresponds to the key in the list of sorted keys at the same list index.
+        """
+        supplementalInfoOutput = list()
+
+        for i, supplementalInfoHandler in enumerate(self.supplementalInfoHandlers):
+            supplementalInfoOutput.append(
+                (supplementalInfoHandler.getFormattedOutput(self.outputDataDictionaries[key][SUP_INFO_KEY][i]) 
+                    for key in self.sortedKeys)
+            )
+        
+        return supplementalInfoOutput
 
 
 class RelativePosODS(OutputDataStratifier):
@@ -235,8 +322,8 @@ class RelativePosODS(OutputDataStratifier):
 
         else: return None
 
-        
-    def formatKeysForOutput(self):
+
+    def getSortedKeysForOutput(self):
         """
         Returns the positions as keys for output, sorted numerically.
         Int and half values are only used if the relevant category has been accessed at least one.
@@ -252,7 +339,10 @@ class RelativePosODS(OutputDataStratifier):
         outputKeys = sorted(outputKeys)
 
         if self.ambiguityHandling == AmbiguityHandling.record: outputKeys.append(None)
-        return outputKeys
+
+
+    def formatKeyForOutput(self, key):
+        return super().formatKeyForOutput(key)
 
 
 class StrandComparisonODS(OutputDataStratifier):
@@ -292,12 +382,16 @@ class StrandComparisonODS(OutputDataStratifier):
         else: return None
 
 
-    def formatKeysForOutput(self):
+    def getSortedKeysForOutput(self):
         """
-        Returns True and False for strand matching and mismatching and None if recording ambiguity
+        Returns True and False for strand matching and mismatching and also None if recording ambiguity
         """
         if None in self.allKeys: return [True, False, None]
         else: return [True, False]
+
+
+    def formatKeyForOutput(self, key):
+        return super().formatKeyForOutput(key)
 
 
 class EncompassingFeatureODS(OutputDataStratifier):
@@ -326,41 +420,35 @@ class EncompassingFeatureODS(OutputDataStratifier):
 
     def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
         """
-        Create a new key based on the position ID of the new encompassing feature and add it to the set.
+        Add the encompassing feature to the set of keys.
         """
-        encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
-                                    str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
 
         # Check to see if we have encountered this encompassing feature before.  If not, add it as a new key.
-        assert encompassingFeatureStr not in self.allKeys, (
-            "2 encompassing features have the same location data: " + encompassingFeatureStr)
-        self.addKey(encompassingFeatureStr)
+        assert encompassingFeature not in self.allKeys, (
+            "2 encompassing features have the same location data: " + encompassingFeature.getLocationString())
+        self.attemptAddKey(encompassingFeature)
 
     
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
-        Format the position of the encompassing feature as a string and pass it back as a key.
+        Retrieve the encompassing feature for the given encompassed feature and pass it back as a key.
         """
         if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousEncompassingFeature:
-
-            # Construct the string to represent the encompassing feature's position and ID
-            encompassingFeature = encompassedFeature.encompassingFeature
-            encompassingFeatureStr = (encompassingFeature.chromosome + ':' + str(encompassingFeature.startPos) + '-' +
-                                      str(encompassingFeature.endPos) + '(' + encompassingFeature.strand + ')')
-
-            return encompassingFeatureStr
+            return encompassedFeature.encompassingFeature
 
         else: return None
 
 
-    def formatKeysForOutput(self):
+    def getSortedKeysForOutput(self):
         """
-        Use the position ID sorting function.
+        Leverage the '<' operator between EncompassedData objects to sort the keys directly.
         """
-        if None in self.allKeys:
-            return sortPositionIDs(list(self.allKeys-{None})) + [None]
-        else:
-            return sortPositionIDs(list(self.allKeys))
+        return super().getSortedKeysForOutput()
+
+
+    def formatKeyForOutput(self, key):
+        if key is None: return key
+        else: return key.getLocationString()
 
 
 class EncompassedFeatureODS(OutputDataStratifier):
@@ -384,34 +472,36 @@ class EncompassedFeatureODS(OutputDataStratifier):
 
     def onNonCountedEncompassedFeature(self, encompassedFeature: EncompassedData):
         """
-        Create a new key based on the position ID of the non-encompassed feature and add it to the set.
+        Pass back the encompassed feature as a key and add it to the set.
         This ensures that all encompassed features are properly tracked.
         """
-        encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
 
         # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
-        if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
+        if encompassedFeature not in self.allKeys: self.attemptAddKey(encompassedFeature)
 
     
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
-        Format the position of the encompassed feature as a string and pass it back as a key.
+        Pass back the encompassed feature as a key.
         Also, check to see if the key has been seen before, and if not, add it.
         """
-        encompassedFeatureStr = (encompassedFeature.chromosome + ':' + str(encompassedFeature.position) + '(' + encompassedFeature.strand + ')')
 
         # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
-        if encompassedFeatureStr not in self.allKeys: self.addKey(encompassedFeatureStr)
+        if encompassedFeature not in self.allKeys: self.attemptAddKey(encompassedFeature)
 
-        return encompassedFeatureStr
+        return encompassedFeature
 
 
-    def formatKeysForOutput(self):
+    def getSortedKeysForOutput(self):
         """
-        Use the position ID sorting function.
-        NOTE: Is it possible that the position IDs are guaranteed to be sorted due to inputs being sorted?  This may merit further investigation...
+        Leverage the '<' operator between EncompassignData objects to sort the keys directly.
         """
-        return sortPositionIDs(list(self.allKeys))
+        return super().getSortedKeysForOutput()
+
+
+    def formatKeyForOutput(self, key):
+        if key is None: return key
+        else: return key.getLocationString()
 
 
 class EncompassedFeatureContextODS(OutputDataStratifier):
@@ -458,16 +548,20 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
 
         # Add this context to the output data dictionaries if we haven't seen it before.
         if context not in self.allKeys:
-            self.addKey(context)
+            self.attemptAddKey(context)
 
         return context
 
     
-    def formatKeysForOutput(self):
+    def getSortedKeysForOutput(self):
         """
         Return the sorted list of contexts seen throughout the encompassed features.
         """
-        return super().formatKeysForOutput()
+        return super().getSortedKeysForOutput()
+
+
+    def formatKeyForOutput(self, key):
+        return super().formatKeyForOutput(key)
 
 
 class PlaceholderODS(OutputDataStratifier):
@@ -491,5 +585,9 @@ class PlaceholderODS(OutputDataStratifier):
         return None
 
     
-    def formatKeysForOutput(self):
-        return super().formatKeysForOutput()
+    def getSortedKeysForOutput(self):
+        return super().getSortedKeysForOutput()
+
+
+    def formatKeyForOutput(self, key):
+        return super().formatKeyForOutput(key)

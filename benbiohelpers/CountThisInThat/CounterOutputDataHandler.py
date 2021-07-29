@@ -1,7 +1,7 @@
 # The class for parsing, formatting, and writing data from the ThisInThatCounter
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
 from benbiohelpers.CountThisInThat.OutputDataStratifiers import *
-from typing import List
+from typing import List, Type
 
 
 class CounterOutputDataHandler:
@@ -103,6 +103,21 @@ class CounterOutputDataHandler:
         self.addNewStratifier(PlaceholderODS(self.getNewStratificationLevelDictionaries(), outputName))
 
 
+    def addSupplementalInformationHandler(self, supplementalInfoClass: Type[SupplementalInformationHandler], 
+                                          stratificationLevel, outputName = None):
+        """
+        Adds the specified supplemental information handler to the given stratification level.
+        Keep in mind that SIH's cannot be added to the bottom level stratifier, as they store information in the specified
+        level's child stratifier.
+        If outputName is set to None, the default output name is used.
+        """
+        if outputName is None:
+            self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass())
+        else:
+            self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName))
+
+
+
     def updateFeatureData(self):
         """
         Updates all relevant values in each ODS using the current encompassed and encompassing features.
@@ -138,7 +153,7 @@ class CounterOutputDataHandler:
 
         # Account for the base case where we are just counting all features.
         if len(self.outputDataStratifiers) == 0: 
-            self.outputDataStratifiers += 1
+            self.outputDataStructure += 1
             return
 
         # Drill down through the ODS's using the relevant keys from this encompassed feature to determine where to count.
@@ -263,6 +278,8 @@ class CounterOutputDataHandler:
                 if len(self.outputDataStratifiers) > 1:
                     for outputDataStratifier in self.outputDataStratifiers[:-1]:
                         headers.append(outputDataStratifier.outputName)
+                        for supplementalInfoHandler in outputDataStratifier.supplementalInfoHandlers:
+                            headers.append(supplementalInfoHandler.outputName)
                 for key in self.outputDataStratifiers[-1].getKeysForOutput():
                     headers.append(getOutputName(-1, key))
 
@@ -272,23 +289,31 @@ class CounterOutputDataHandler:
 
                 # Next, write the rest of the data using a recursive function for writing rows of data from 
                 # an output data structure of an unknown number of stratifiacion levels.
-                currentDataRow = [None]*(len(self.outputDataStratifiers) - 1 + len(headers))
+                currentDataRow = [None]*(len(headers))
                 previousKeys = [None]*(len(self.outputDataStratifiers) - 1)
-                def addDataRow(currentDataObject, stratificationLevel):
+                def addDataRow(currentDataObject, stratificationLevel, supplementalInfoCount):
 
                     # If we're not at the final level of the data structure, iterate through it, recursively calling this function on the results.
                     if stratificationLevel + 1 != len(self.outputDataStratifiers):
                         for key in self.outputDataStratifiers[stratificationLevel].getKeysForOutput():
-                            currentDataRow[stratificationLevel] = getOutputName(stratificationLevel, key)
+
+                            currentDataRow[stratificationLevel + supplementalInfoCount] = getOutputName(stratificationLevel, key)
                             previousKeys[stratificationLevel] = key
-                            addDataRow(currentDataObject[key],stratificationLevel + 1)
+
+                            supplementalInfoHandlers = self.outputDataStratifiers[stratificationLevel].supplementalInfoHandlers
+                            for i, supplementalInfoHandler in enumerate(supplementalInfoHandlers):
+                                supplementalInfo = supplementalInfoHandler.getFormattedOutput(currentDataObject[key][SUP_INFO_KEY][i])
+                                currentDataRow[stratificationLevel + supplementalInfoCount + i + 1] = supplementalInfo
+
+                            addDataRow(currentDataObject[key],stratificationLevel + 1, 
+                                       supplementalInfoCount + len(supplementalInfoHandlers))
                     
                     # Otherwise, add the entries in this dictionary (which should be integers representing counts) to the data row 
                     # along with any count derivatives and write the row.
                     else:
                         for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
-                            currentDataRow[stratificationLevel + i] = str(currentDataObject[key])
-                        currentDataRow[stratificationLevel + i + 1:] = self.getCountDerivatives(previousKeys)
+                            currentDataRow[stratificationLevel + supplementalInfoCount + i] = str(currentDataObject[key])
+                        currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(previousKeys)
                         outputFile.write('\t'.join(currentDataRow) + '\n')
 
-                addDataRow(self.outputDataStructure, 0)
+                addDataRow(self.outputDataStructure, 0, 0)

@@ -14,6 +14,18 @@ class EncompassedData:
         self.setLocationData(acceptableChromosomes)
         self.setOtherData()
 
+    def __key(self):
+        return (self.chromosome, self.position, self.strand)
+
+    def __hash__(self) -> int:
+        return hash(self.__key)
+
+    def __eq__(self, other) -> bool:
+        return (self.__key) == (other.__key)
+
+    def __lt__(self, other) -> bool:
+        return (self.__key) < (other.__key)
+
     def setLocationData(self, acceptableChromosomes):
         """
         Sets the chromosome, position, and strand of the feature.
@@ -28,6 +40,9 @@ class EncompassedData:
         # Make sure the mutation is in a valid chromosome.
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
+
+    def getLocationString(self):
+        return self.chromosome + ':' + str(self.position) + '(' + self.strand + ')'
 
     def setOtherData(self):
         """
@@ -83,8 +98,20 @@ class EncompassingData:
         self.choppedUpLine = line.strip().split()
 
         self.setLocationData(acceptableChromosomes)
+        self.setOtherData()
 
+    def __key(self):
+        return (self.chromosome, self.startPos, self.endPos, self.strand)
+
+    def __hash__(self) -> int:
+        return hash(self.__key)
+
+    def __eq__(self, other) -> bool:
+        return (self.__key) == (other.__key)
     
+    def __lt__(self, other) -> bool:
+        return (self.__key) < (other.__key)
+
     def setLocationData(self, acceptableChromosomes):
         """
         Sets the chromosome, position, and strand of the feature.
@@ -102,6 +129,11 @@ class EncompassingData:
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
 
+    def setOtherData():
+        pass
+
+    def getLocationString(self):
+        return self.chromosome + ':' + str(self.startPos) + '-' + str(self.endPos) + '(' + self.strand + ')'
 
 class EncompassingDataDefaultStrand(EncompassingData):
     """
@@ -120,3 +152,11 @@ class EncompassingDataDefaultStrand(EncompassingData):
         # Make sure the mutation is in a valid chromosome.
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
+
+class TfbsData(EncompassedData):
+    """
+    Like encompassing data, but with the name of the transcription factor binding site.
+    """
+
+    def setOtherData(self):
+        self.tfbsName = self.choppedUpLine[6] # Might need to change the column number here...
