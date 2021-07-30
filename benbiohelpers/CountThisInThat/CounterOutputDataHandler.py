@@ -1,7 +1,9 @@
 # The class for parsing, formatting, and writing data from the ThisInThatCounter
+from _typeshed import NoneType
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
 from benbiohelpers.CountThisInThat.OutputDataStratifiers import *
-from typing import List, Type
+from typing import List, Type, Union
+import subprocess
 
 
 class CounterOutputDataHandler:
@@ -20,7 +22,7 @@ class CounterOutputDataHandler:
         # Set tracking options to False by default.
         self.trackAllEncompassing = False
         self.trackNonCountedEncompassed = False
-        self.trackSupplementalInformationOnNonCounted = False
+        self.trackSupInfoUntilExit = False
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
 
@@ -114,11 +116,31 @@ class CounterOutputDataHandler:
         level's child stratifier.
         If outputName is set to None, the default output name is used.
         """
-        self.trackSupplementalInformationOnNonCounted = True
+        self.trackSupInfoUntilExit = True
         if outputName is None:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass())
         else:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName))
+
+
+    def prepareToWriteIncrementalBed(self, outputFilepath, ODSSubs = None):
+        """
+        Prepare the class to output data with each finished encompassed/encompassing feature instead of
+        all at once at the end.  (Should be more memory efficient)
+        Also, this method preserves bed formatting for those features.
+
+        ODSSubs is used to susbstitute information from the output data structures into the original data line.
+        If ODSSubs is None, all data is simply appended to the line.  Otherwise, it should be a list with
+        as many items as are outputted by the ODS (minus the first encompassed/encompassing feature ODS).  Each
+        item in the list should be a number representing the column to substitute.
+        """
+
+        assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
+            "Cannot write incremental bed file unless leading ODS is encompassed/encompassing feature ODS."
+        )
+
+        self.ODSSubs: List = ODSSubs
+        self.outputFile = open(outputFilepath, 'w')
 
 
     def updateFeatureData(self):
@@ -192,12 +214,14 @@ class CounterOutputDataHandler:
                     if oDS.getRelevantKey(self.encompassedFeature) is not None: waitingOnAmbiguityChecks = True
                 else:
                     if oDS.getRelevantKey(self.encompassedFeature) is None: 
-                        return (False, False) # There is an ODS that ignores ambiguity, and its key is ambiguous.  Don't count EVER.
+                        # There is an ODS that ignores ambiguity, and its key is ambiguous.  Don't count,
+                        # and stop tracking unless we are still tracking supplemental information
+                        return (False, (self.trackSupInfoUntilExit and not exitingEncompassment)) 
                     else: waitingOnAmbiguityChecks = True
 
         # Is there any nontolerant ambiguity handling in this data structure? If so, do we have enough information to count it now?
         if nontolerantAmbiguityHandling:
-            if not waitingOnAmbiguityChecks or exitingEncompassment: return (True, False)
+            if not waitingOnAmbiguityChecks and (not self.trackSupInfoUntilExit or exitingEncompassment): return (True, False)
             else: return (False, True)
 
         # If all ambiguity handling is tolerant and we are not exiting encompassment, count and continue tracking.
@@ -224,7 +248,7 @@ class CounterOutputDataHandler:
 
         # Next, figure out whether or not the object should be counted, and whether or not it still needs to be tracked.
         countFeature, continueTracking = self.checkFeatureStatus(exitingEncompassment)
-        if countFeature or self.trackSupplementalInformationOnNonCounted: self.updateODS(countFeature)
+        if countFeature or self.trackSupInfoUntilExit: self.updateODS(countFeature)
 
         # If we're no longer tracking and the feature wasn't just counted, determine if the feature was EVER counted. If not, pass it to onNonCountedEncompassedFeature().
         # If this feature made it all the way to encompassment exiting, it WAS counted, either as the end condition of nontolerant ambiguity handling
@@ -233,94 +257,180 @@ class CounterOutputDataHandler:
 
         return continueTracking
 
-    
-    def getCountDerivatives(self, previousKeys, getHeaders = False) -> List[str]:
-        """
-        Gets additional counts that are not explicitly defined within the output data structure.
-        For example, the counts for both strands combined or both strands combined and aligned during dyad position counting.
-        if getHeaders is true, the headers for the new data columns are returned instead.
-        All return types should be lists of strings so they can be directly written to the output file using join.
-        Also, MAKE SURE that the both lists returned whether getHeaders is true or false are of the SAME LENGTH.
-        Should be overridden in children class, as the base functionality just returns empty lists.
-        """
-        return list()
 
-    ENCOMPASSED_FEATURE = 1
-    ENCOMPASSING_FEATURE = 2
-    def writeFeature(encompassedData: EncompassedData = None, encompassingData: EncompassingData = None):
-        pass
+    class OutputDataWriter():
+
+        def __init__(self, outputDataStructure, outputDataStratifiers, outputFilePath) -> None:
+
+            self.outputDataStructure = outputDataStructure
+            self.outputDataStratifiers: List[OutputDataStratifier] = outputDataStratifiers
+            self.outputFilePath = outputFilePath
+            self.outputFile = open(outputFilePath, 'w')
+
+            self.ODSSubs: List = None
+            self.customStratifyingNames = None
+            self.currentDataRow = None
+            self.previousKeys = None
+            
+            self.headers = self.getHeaders()
+
+        def getCountDerivatives(self, previousKeys, getHeaders = False) -> List[str]:
+            """
+            Gets additional counts that are not explicitly defined within the output data structure.
+            For example, the counts for both strands combined or both strands combined and aligned during dyad position counting.
+            if getHeaders is true, the headers for the new data columns are returned instead.
+            All return types should be lists of strings so they can be directly written to the output file using join.
+            Also, MAKE SURE that the returned list, whether getHeaders is true or false, is always the SAME LENGTH.
+            Should be overridden in children class, as the base functionality just returns empty lists.
+            """
+            return list()
 
 
-    def writeResults(self, outputFilePath, customStratifyingNames = None):
-        """
-        Writes the results of the output data structure to a given file.
-        The customStratifyingNames variable, if supplied, should contain a list of dictionaries to convert keys to the desired string output.
-        If not none, the list should have as many entries as layers in the output data structure, but any given entry can be "None" to indicate
-        that naming should just use the keys using the basic formatting.
-        """
+        def getHeaders(self):
 
-        # A convenience function for getting output names from keys based on the customStratifyingNames parameter.
-        def getOutputName(stratificationLevel, key):
+            headers = list()
+            if len(self.outputDataStratifiers) > 1:
+                for outputDataStratifier in self.outputDataStratifiers[:-1]:
+                    headers.append(outputDataStratifier.outputName)
+                    for supplementalInfoHandler in outputDataStratifier.supplementalInfoHandlers:
+                        headers.append(supplementalInfoHandler.outputName)
+            for key in self.outputDataStratifiers[-1].getKeysForOutput():
+                headers.append(self.getOutputName(-1, key))
 
-            if (customStratifyingNames is None 
-                or customStratifyingNames[stratificationLevel] is None 
-                or key not in customStratifyingNames[stratificationLevel]):
+            headers += self.getCountDerivatives(None, getHeaders = True)
+
+
+        def setDataCol(self, dataRow, dataCol, value):
+            if self.ODSSubs is None:
+                dataRow[dataCol] = value
+            if self.ODSSubs[dataCol] is None:
+                dataRow[self.ODSSubs[:dataCol].count(None)] = value
+            else: dataRow[1][self.ODSSubs[dataCol]] = value
+
+
+        def getOutputName(self,stratificationLevel, key):
+            """
+            A convenience function for getting output names from keys based on the customStratifyingNames parameter.
+            """
+
+            if (self.customStratifyingNames is None 
+                or self.customStratifyingNames[stratificationLevel] is None 
+                or key not in self.customStratifyingNames[stratificationLevel]):
                 return self.outputDataStratifiers[stratificationLevel].formatKeyForOutput(key)
-            else: return customStratifyingNames[stratificationLevel][key]
+            else: return self.customStratifyingNames[stratificationLevel][key]
 
-        with open(outputFilePath, 'w') as outputFile:
+        def writeDataRows(self, currentDataObject, stratificationLevel, supplementalInfoCount):
 
-            # Did we receive a valid customStratifyingNames parameter?
-            assert customStratifyingNames is None or len(customStratifyingNames) == len(self.outputDataStratifiers), (
-                "Custom stratifying names given, but there is not exactly one entry for each ODS.")
+            # If we're not at the final level of the data structure, iterate through it, recursively calling this function on the results.
+            if stratificationLevel + 1 != len(self.outputDataStratifiers):
+                for key in self.outputDataStratifiers[stratificationLevel].getKeysForOutput():
 
-            # Account for the base case of just counting everything.
-            if len(self.outputDataStratifiers) == 0: outputFile.write(str(self.outputDataStructure) + '\n')
+                    self.setDataCol(self.currentDataRow, stratificationLevel + supplementalInfoCount, 
+                                    self.getOutputName(stratificationLevel, key))
+                    self.previousKeys[stratificationLevel] = key
 
+                    supplementalInfoHandlers = self.outputDataStratifiers[stratificationLevel].supplementalInfoHandlers
+                    for i, supplementalInfoHandler in enumerate(supplementalInfoHandlers):
+                        supplementalInfo = supplementalInfoHandler.getFormattedOutput(currentDataObject[key][SUP_INFO_KEY][i])
+                        self.setDataCol(self.currentDataRow, stratificationLevel + supplementalInfoCount + i + 1, supplementalInfo)
+
+                    self.writeDataRows(self.currentDataRow, currentDataObject[key], stratificationLevel + 1, 
+                                          supplementalInfoCount + len(supplementalInfoHandlers))
+            
+            # Otherwise, add the entries in this dictionary (which should be integers representing counts) to the data row 
+            # along with any count derivatives and write the row.
             else:
+                for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
+                    self.setDataCol(self.currentDataRow, stratificationLevel + supplementalInfoCount + i, str(currentDataObject[key]))
+                self.currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(self.previousKeys)
+                if isinstance(self.currentDataRow[0],list):
+                    self.outputFile.write('\t'.join(('\t'.join(self.currentDataRow[0]), self.currentDataRow[1:])) + '\n')
+                else:self.outputFile.write('\t'.join(self.currentDataRow) + '\n')
 
-                # First, write the headers based on the keys of the last data structure and the output names of any others,
-                # as well as any "count derivatives" defined in children class (See getCountDerivatives method).
-                headers = list()
-                if len(self.outputDataStratifiers) > 1:
-                    for outputDataStratifier in self.outputDataStratifiers[:-1]:
-                        headers.append(outputDataStratifier.outputName)
-                        for supplementalInfoHandler in outputDataStratifier.supplementalInfoHandlers:
-                            headers.append(supplementalInfoHandler.outputName)
-                for key in self.outputDataStratifiers[-1].getKeysForOutput():
-                    headers.append(getOutputName(-1, key))
 
-                headers += self.getCountDerivatives(None, getHeaders = True)
+        def writeFeature(self, featureToWrite: Union[EncompassingData, EncompassedData]):
+            """
+            Writes individual features as they cease to be tracked.
+            """
 
-                outputFile.write('\t'.join(headers) + '\n')
+            # Prepare the data row based on the number of headers.
+            self.currentDataRow = [featureToWrite.choppedUpLine.copy()]
+            if self.ODSSubs is None: self.currentDataRow += [None] * (len(self.headers) - 1)
+            else: self.currentDataRow += [None] * (self.ODSSubs.count(None) - 1)
 
-                # Next, write the rest of the data using a recursive function for writing rows of data from 
-                # an output data structure of an unknown number of stratifiacion levels.
-                currentDataRow = [None]*(len(headers))
-                previousKeys = [None]*(len(self.outputDataStratifiers) - 1)
-                def addDataRow(currentDataObject, stratificationLevel, supplementalInfoCount):
+            self.writeDataRows(self.outputDataStructure[featureToWrite], 1, 0)
 
-                    # If we're not at the final level of the data structure, iterate through it, recursively calling this function on the results.
-                    if stratificationLevel + 1 != len(self.outputDataStratifiers):
-                        for key in self.outputDataStratifiers[stratificationLevel].getKeysForOutput():
 
-                            currentDataRow[stratificationLevel + supplementalInfoCount] = getOutputName(stratificationLevel, key)
-                            previousKeys[stratificationLevel] = key
+        def finishIncrementalWriting(self, outputFilePath):
+            """
+            Sorts the results of individual feature writing, as features are not guaranteed to be written in the same order
+            as the input files.
+            """
+            subprocess.run(("sort","-k1,1","-k2,2n",outputFilePath,"-o",outputFilePath), check = True)
+            self.outputFile.close()
 
-                            supplementalInfoHandlers = self.outputDataStratifiers[stratificationLevel].supplementalInfoHandlers
-                            for i, supplementalInfoHandler in enumerate(supplementalInfoHandlers):
-                                supplementalInfo = supplementalInfoHandler.getFormattedOutput(currentDataObject[key][SUP_INFO_KEY][i])
-                                currentDataRow[stratificationLevel + supplementalInfoCount + i + 1] = supplementalInfo
 
-                            addDataRow(currentDataObject[key],stratificationLevel + 1, 
-                                       supplementalInfoCount + len(supplementalInfoHandlers))
-                    
-                    # Otherwise, add the entries in this dictionary (which should be integers representing counts) to the data row 
-                    # along with any count derivatives and write the row.
-                    else:
-                        for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
-                            currentDataRow[stratificationLevel + supplementalInfoCount + i] = str(currentDataObject[key])
-                        currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(previousKeys)
-                        outputFile.write('\t'.join(currentDataRow) + '\n')
+        def writeResults(self, outputFilePath, customStratifyingNames = None):
+            """
+            Writes the results of the output data structure to a given file.
+            The customStratifyingNames variable, if supplied, should contain a list of dictionaries to convert keys to the desired string output.
+            If not none, the list should have as many entries as layers in the output data structure, but any given entry can be "None" to indicate
+            that naming should just use the keys using the basic formatting.
+            """
 
-                addDataRow(self.outputDataStructure, 0, 0)
+            with open(outputFilePath, 'w') as outputFile:
+
+                # Did we receive a valid customStratifyingNames parameter?
+                assert customStratifyingNames is None or len(customStratifyingNames) == len(self.outputDataStratifiers), (
+                    "Custom stratifying names given, but there is not exactly one entry for each ODS.")
+
+                # Account for the base case of just counting everything.
+                if len(self.outputDataStratifiers) == 0: outputFile.write(str(self.outputDataStructure) + '\n')
+
+                else:
+
+                    # First, write the headers based on the keys of the last data structure and the output names of any others,
+                    # as well as any "count derivatives" defined in children class (See getCountDerivatives method).
+                    headers = list()
+                    if len(self.outputDataStratifiers) > 1:
+                        for outputDataStratifier in self.outputDataStratifiers[:-1]:
+                            headers.append(outputDataStratifier.outputName)
+                            for supplementalInfoHandler in outputDataStratifier.supplementalInfoHandlers:
+                                headers.append(supplementalInfoHandler.outputName)
+                    for key in self.outputDataStratifiers[-1].getKeysForOutput():
+                        headers.append(getOutputName(-1, key))
+
+                    headers += self.getCountDerivatives(None, getHeaders = True)
+
+                    outputFile.write('\t'.join(headers) + '\n')
+
+                    # Next, write the rest of the data using a recursive function for writing rows of data from 
+                    # an output data structure of an unknown number of stratifiacion levels.
+                    currentDataRow = [None]*(len(headers))
+                    previousKeys = [None]*(len(self.outputDataStratifiers) - 1)
+                    def addDataRow(currentDataObject, stratificationLevel, supplementalInfoCount):
+
+                        # If we're not at the final level of the data structure, iterate through it, recursively calling this function on the results.
+                        if stratificationLevel + 1 != len(self.outputDataStratifiers):
+                            for key in self.outputDataStratifiers[stratificationLevel].getKeysForOutput():
+
+                                currentDataRow[stratificationLevel + supplementalInfoCount] = getOutputName(stratificationLevel, key)
+                                previousKeys[stratificationLevel] = key
+
+                                supplementalInfoHandlers = self.outputDataStratifiers[stratificationLevel].supplementalInfoHandlers
+                                for i, supplementalInfoHandler in enumerate(supplementalInfoHandlers):
+                                    supplementalInfo = supplementalInfoHandler.getFormattedOutput(currentDataObject[key][SUP_INFO_KEY][i])
+                                    currentDataRow[stratificationLevel + supplementalInfoCount + i + 1] = supplementalInfo
+
+                                addDataRow(currentDataObject[key],stratificationLevel + 1, 
+                                        supplementalInfoCount + len(supplementalInfoHandlers))
+                        
+                        # Otherwise, add the entries in this dictionary (which should be integers representing counts) to the data row 
+                        # along with any count derivatives and write the row.
+                        else:
+                            for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
+                                currentDataRow[stratificationLevel + supplementalInfoCount + i] = str(currentDataObject[key])
+                            currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(previousKeys)
+                            outputFile.write('\t'.join(currentDataRow) + '\n')
+
+                    addDataRow(self.outputDataStructure, 0, 0)

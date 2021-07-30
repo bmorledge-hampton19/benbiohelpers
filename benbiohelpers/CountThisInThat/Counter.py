@@ -227,8 +227,8 @@ class ThisInThatCounter(ABC):
         featuresToStopTracking = list()
         for feature in self.confirmedEncompassedFeatures:
             if self.isEncompassedFeatureWithinEncompassingFeature(feature):
-                continueTracking = self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False)
-                if not continueTracking: featuresToStopTracking.append(feature)
+                if not self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False):
+                    featuresToStopTracking.append(feature)
 
         # Remove any features that don't need to be tracked anymore.
         self.confirmedEncompassedFeatures = list(set(self.confirmedEncompassedFeatures) - set(featuresToStopTracking))
@@ -254,8 +254,9 @@ class ThisInThatCounter(ABC):
 
                 # Check for any features with confirmed encompassment.
                 if self.isEncompassedFeatureWithinEncompassingFeature(): 
-                    self.confirmedEncompassedFeatures.append(self.currentEncompassedFeature)
-                    self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(self.currentEncompassedFeature, self.currentEncompassingFeature, False)
+                    if self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(self.currentEncompassedFeature, 
+                                                                                        self.currentEncompassingFeature, False):
+                        self.confirmedEncompassedFeatures.append(self.currentEncompassedFeature)
                     self.isCurrentEncompassedFeatureActuallyEncompassed = True
 
                 # Get data on the next encompassed feature.

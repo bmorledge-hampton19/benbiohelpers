@@ -411,8 +411,6 @@ class EncompassingFeatureODS(OutputDataStratifier):
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
         Keep track of the feature encompassing the encompassed feature.
-        Also, use this to count non-encompassed features and track all encompassing features, 
-        even if they don't contain encompassed features.
         """
         if encompassedFeature.encompassingFeature is not encompassingFeature:
             encompassedFeature.ambiguousEncompassingFeature = True
@@ -429,7 +427,7 @@ class EncompassingFeatureODS(OutputDataStratifier):
             "2 encompassing features have the same location data: " + encompassingFeature.getLocationString())
         self.attemptAddKey(encompassingFeature)
 
-    
+
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
         Retrieve the encompassing feature for the given encompassed feature and pass it back as a key.
@@ -478,9 +476,9 @@ class EncompassedFeatureODS(OutputDataStratifier):
         """
 
         # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
-        if encompassedFeature not in self.allKeys: self.attemptAddKey(encompassedFeature)
+        self.attemptAddKey(encompassedFeature)
 
-    
+
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
         Pass back the encompassed feature as a key.
@@ -488,7 +486,7 @@ class EncompassedFeatureODS(OutputDataStratifier):
         """
 
         # Check to see if we have encountered this encompassed feature before.  If not, add it as a new key.
-        if encompassedFeature not in self.allKeys: self.attemptAddKey(encompassedFeature)
+        self.attemptAddKey(encompassedFeature)
 
         return encompassedFeature
 
@@ -553,7 +551,7 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
 
         return context
 
-    
+
     def getSortedKeysForOutput(self):
         """
         Return the sorted list of contexts seen throughout the encompassed features.
@@ -577,7 +575,7 @@ class PlaceholderODS(OutputDataStratifier):
         for dictionary in self.outputDataDictionaries: dictionary[None] = 0
         self.allKeys.add(None)
 
-    
+
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         return
 
@@ -585,7 +583,7 @@ class PlaceholderODS(OutputDataStratifier):
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         return None
 
-    
+
     def getSortedKeysForOutput(self):
         return super().getSortedKeysForOutput()
 
