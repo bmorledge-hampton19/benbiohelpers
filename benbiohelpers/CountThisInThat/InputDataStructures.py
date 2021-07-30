@@ -18,13 +18,13 @@ class EncompassedData:
         return (self.chromosome, self.position, self.strand)
 
     def __hash__(self) -> int:
-        return hash(self.__key)
+        return hash(self.__key())
 
     def __eq__(self, other) -> bool:
-        return (self.__key) == (other.__key)
+        return (self.__key()) == (other.__key())
 
     def __lt__(self, other) -> bool:
-        return (self.__key) < (other.__key)
+        return (self.__key()) < (other.__key())
 
     def setLocationData(self, acceptableChromosomes):
         """
@@ -104,13 +104,13 @@ class EncompassingData:
         return (self.chromosome, self.startPos, self.endPos, self.strand)
 
     def __hash__(self) -> int:
-        return hash(self.__key)
+        return hash(self.__key())
 
     def __eq__(self, other) -> bool:
-        return (self.__key) == (other.__key)
+        return (self.__key()) == (other.__key())
     
     def __lt__(self, other) -> bool:
-        return (self.__key) < (other.__key)
+        return (self.__key()) < (other.__key())
 
     def setLocationData(self, acceptableChromosomes):
         """
@@ -129,7 +129,7 @@ class EncompassingData:
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
 
-    def setOtherData():
+    def setOtherData(self):
         pass
 
     def getLocationString(self):
@@ -153,7 +153,7 @@ class EncompassingDataDefaultStrand(EncompassingData):
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
 
-class TfbsData(EncompassedData):
+class TfbsData(EncompassingData):
     """
     Like encompassing data, but with the name of the transcription factor binding site.
     """

@@ -1,7 +1,7 @@
 # This script houses the SupplementalInformation class and subclasses.
 # These classes are used to add additional information to the output data stratifiers.
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, Set
 from benbiohelpers.CountThisInThat.InputDataStructures import *
 
 SUP_INFO_KEY = "SIK"
@@ -24,7 +24,7 @@ class SupplementalInformationHandler(ABC):
         """
 
     @abstractmethod
-    def updateSupplementalInfo(self, currentInfo, encompassedData: EncompassedData) -> Any:
+    def updateSupplementalInfo(self, currentInfo, encompassedData: EncompassedData, encompassingData: EncompassingData) -> Any:
         """
         Takes the given "currentInfo" and modifies it based on the given encompassed data.
         Returns the result.
@@ -47,11 +47,11 @@ class TfbsSupInfoHandler(SupplementalInformationHandler):
         super().__init__(outputName)
 
     def initializeSupplementalInfo(self):
-        return list()    
+        return set()    
 
-    def updateSupplementalInfo(self, currentInfo: List[str], encompassedData: TfbsData):
-        currentInfo.append(encompassedData.tfbsName)
+    def updateSupplementalInfo(self, currentInfo: Set[str], encompassedData: EncompassedData, encompassingData: TfbsData):
+        currentInfo.add(encompassingData.tfbsName+encompassingData.strand)
         return currentInfo
 
     def getFormattedOutput(self, info):
-        return ','.join(info)
+        return ','.join(sorted(info))

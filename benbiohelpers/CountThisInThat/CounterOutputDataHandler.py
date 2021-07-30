@@ -20,6 +20,7 @@ class CounterOutputDataHandler:
         # Set tracking options to False by default.
         self.trackAllEncompassing = False
         self.trackNonCountedEncompassed = False
+        self.trackSupplementalInformationOnNonCounted = False
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
 
@@ -73,19 +74,20 @@ class CounterOutputDataHandler:
                                                          encompassingFeature, centerRelativePos, extraRangeRadius, outputName))
 
 
-    def addEncompassingFeatureStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = "Encompassing_Feature"):
+    def addEncompassingFeatureStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, 
+                                         outputName = "Encompassing_Feature", trackAllEncompassing = True):
         """
         Adds a layer onto the output data structure to stratify by encompassing features.
         """
-        self.trackAllEncompassing = True
+        self.trackAllEncompassing = trackAllEncompassing
         self.addNewStratifier(EncompassingFeatureODS(ambiguityHandling, self.getNewStratificationLevelDictionaries(), outputName))
 
 
-    def addEncompassedFeatureStratifier(self, outputName = "Encompassed_Feature"):
+    def addEncompassedFeatureStratifier(self, outputName = "Encompassed_Feature", trackNonCountedEncompassed = True):
         """
         Adds a layer onto the output data structure to stratify by encompassed features.
         """
-        self.trackNonCountedEncompassed = True
+        self.trackNonCountedEncompassed = trackNonCountedEncompassed
         self.addNewStratifier(EncompassedFeatureODS(self.getNewStratificationLevelDictionaries(), outputName))
 
 
@@ -96,11 +98,12 @@ class CounterOutputDataHandler:
         self.addNewStratifier(EncompassedFeatureContextODS(self.getNewStratificationLevelDictionaries(), outputName, contextSize, includeAlteredTo))
 
 
-    def addPlaceholderStratifier(self, outputName = "Counts"):
+    def addPlaceholderStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = None):
         """
         Adds a layer onto the output data structure to make sure that the last data column just contains raw counts.
+        Only change ambiguity handling if you want to ensure that all encompassed features are only counted once.  (Change to "record")
         """
-        self.addNewStratifier(PlaceholderODS(self.getNewStratificationLevelDictionaries(), outputName))
+        self.addNewStratifier(PlaceholderODS(self.getNewStratificationLevelDictionaries(), ambiguityHandling, outputName))
 
 
     def addSupplementalInformationHandler(self, supplementalInfoClass: Type[SupplementalInformationHandler], 
@@ -111,11 +114,11 @@ class CounterOutputDataHandler:
         level's child stratifier.
         If outputName is set to None, the default output name is used.
         """
+        self.trackSupplementalInformationOnNonCounted = True
         if outputName is None:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass())
         else:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName))
-
 
 
     def updateFeatureData(self):
@@ -146,21 +149,25 @@ class CounterOutputDataHandler:
                 outputDataStratifier.onNewEncompassingFeature(encompassingFeature)
 
 
-    def countFeature(self):
+    def updateODS(self, count):
         """
-        Increments the proper object in the output data structure.
+        If count is true, increments the proper object in the output data structure.
+        Otherwise, just updates supplemental information.
         """
 
         # Account for the base case where we are just counting all features.
         if len(self.outputDataStratifiers) == 0: 
-            self.outputDataStructure += 1
+            if count: self.outputDataStructure += 1
             return
 
         # Drill down through the ODS's using the relevant keys from this encompassed feature to determine where to count.
         currentODSDict = self.outputDataStructure
         for outputDataStratifier in self.outputDataStratifiers[:-1]:
             currentODSDict = currentODSDict[outputDataStratifier.getRelevantKey(self.encompassedFeature)]
-        currentODSDict[self.outputDataStratifiers[-1].getRelevantKey(self.encompassedFeature)] += 1
+            for i, supplementalInfoHandler in enumerate(outputDataStratifier.supplementalInfoHandlers):
+                currentODSDict[SUP_INFO_KEY][i] = supplementalInfoHandler.updateSupplementalInfo(currentODSDict[SUP_INFO_KEY][i], 
+                                                                                                 self.encompassedFeature, self.encompassingFeature)
+        if count: currentODSDict[self.outputDataStratifiers[-1].getRelevantKey(self.encompassedFeature)] += 1
 
 
     def checkFeatureStatus(self, exitingEncompassment):
@@ -217,12 +224,12 @@ class CounterOutputDataHandler:
 
         # Next, figure out whether or not the object should be counted, and whether or not it still needs to be tracked.
         countFeature, continueTracking = self.checkFeatureStatus(exitingEncompassment)
-        if countFeature: self.countFeature()
+        if countFeature or self.trackSupplementalInformationOnNonCounted: self.updateODS(countFeature)
 
         # If we're no longer tracking and the feature wasn't just counted, determine if the feature was EVER counted. If not, pass it to onNonCountedEncompassedFeature().
         # If this feature made it all the way to encompassment exiting, it WAS counted, either as the end condition of nontolerant ambiguity handling
         # or previously due to it being fully tolerant ambiguity handling.
-        elif not continueTracking and not exitingEncompassment: self.onNonCountedEncompassedFeature(encompassedFeature)
+        if not countFeature and not continueTracking and not exitingEncompassment: self.onNonCountedEncompassedFeature(encompassedFeature)
 
         return continueTracking
 
@@ -249,7 +256,7 @@ class CounterOutputDataHandler:
         Writes the results of the output data structure to a given file.
         The customStratifyingNames variable, if supplied, should contain a list of dictionaries to convert keys to the desired string output.
         If not none, the list should have as many entries as layers in the output data structure, but any given entry can be "None" to indicate
-        that naming should just use the keys.
+        that naming should just use the keys using the basic formatting.
         """
 
         # A convenience function for getting output names from keys based on the customStratifyingNames parameter.
@@ -258,7 +265,7 @@ class CounterOutputDataHandler:
             if (customStratifyingNames is None 
                 or customStratifyingNames[stratificationLevel] is None 
                 or key not in customStratifyingNames[stratificationLevel]):
-                return str(key)
+                return self.outputDataStratifiers[stratificationLevel].formatKeyForOutput(key)
             else: return customStratifyingNames[stratificationLevel][key]
 
         with open(outputFilePath, 'w') as outputFile:

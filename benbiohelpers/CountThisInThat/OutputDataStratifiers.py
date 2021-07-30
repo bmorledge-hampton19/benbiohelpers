@@ -1,7 +1,7 @@
 # This script contains an abstract class as well as its children that represent different ways the 
 # output data structure from the CounterOutputDataHandler can be stratified.
 from abc import ABC, abstractmethod
-from benbiohelpers.CountThisInThat.SupplementalInformation import SUP_INFO_KEY, SupplementalInformation, SupplementalInformationHandler
+from benbiohelpers.CountThisInThat.SupplementalInformation import SUP_INFO_KEY, SupplementalInformationHandler
 from typing import List, Dict, Tuple, Union
 from enum import Enum
 from benbiohelpers.CountThisInThat.InputDataStructures import *
@@ -67,7 +67,6 @@ class OutputDataStratifier(ABC):
         self.outputDataDictionaries: List[Dict] = outputDataDictionaries
         self.allKeys = set()
         self.sortedKeys = None
-        self.keysFormattedForOutput = None
         self.outputName = outputName
         self.childDataStratifier: OutputDataStratifier = None
         self.supplementalInfoHandlers: List[SupplementalInformationHandler] = list()
@@ -100,7 +99,7 @@ class OutputDataStratifier(ABC):
             dictionary[key] = dict()
             newChildDictionaries.append(dictionary[key])
 
-        if len(self.supplementalInfoHandlers > 0):
+        if len(self.supplementalInfoHandlers) > 0:
             for key in keys:
                 dictionary[key][SUP_INFO_KEY] = list()
                 for supplementalInfoHandler in self.supplementalInfoHandlers:
@@ -124,7 +123,7 @@ class OutputDataStratifier(ABC):
             self.outputDataDictionaries.append(dictionary)
                 
             if hasChildStratifier:
-                newChildDictionaries.extend(self.initializeChildDictionaries(dictionary))
+                newChildDictionaries.extend(self.initializeChildDictionaries(dictionary, self.allKeys))
             else: 
                 for key in self.allKeys: dictionary[key] = 0
 
@@ -138,7 +137,7 @@ class OutputDataStratifier(ABC):
         Then, if this stratifier has any child stratifiers, creates new dictionaries at that key and passes them down through addDictionaries.
         Also initializes supplemental information for all child dictionaries.
         """
-        assert key is SUP_INFO_KEY or key != SUP_INFO_KEY, "Collision with SUP_INFO_Key"
+        assert key is SUP_INFO_KEY or not isinstance(key, str) or key != SUP_INFO_KEY, "Collision with SUP_INFO_Key"
 
         if key in self.allKeys:
             self.onKeyAlreadyPresent(key)
@@ -205,34 +204,35 @@ class OutputDataStratifier(ABC):
     @abstractmethod
     def formatKeyForOutput(self, key):
         """
-        Performs any formatting necessary to prepare the key for output. (String casting does NOT need to occur here.)
+        Performs any formatting necessary to prepare the key for output to a file.
         """
-        return key
+        return str(key)
 
 
-    def getKeysForOutput(self):
+    def getKeysForOutput(self, formatted = False):
         """
         Returns all keys that are suitable for output.
+        If formatted is true, the formatKeyForOutput function is called on the keys before returning.  Otherwise, the original keys (sorted) are returned.
         """
-        if self.sortedKeys is None: self.sortedKeys = self.getSortedKeysForOutput
-        if self.keysFormattedForOutput is None: self.keysFormattedForOutput = (self.formatKeyForOutput(key) for key in self.sortedKeys)
-        return self.keysFormattedForOutput
+        if self.sortedKeys is None: self.sortedKeys = self.getSortedKeysForOutput()
+        if formatted: return [self.formatKeyForOutput(key) for key in self.sortedKeys]
+        else: return self.sortedKeys
 
-    
-    def getSupplementalInfoOutput(self):
-        """
-        Returns a (potentially empty) list of lists of outputs for each supplemental information handler in the ODS
-        Each output in the list corresponds to the key in the list of sorted keys at the same list index.
-        """
-        supplementalInfoOutput = list()
+    ### Delete? ###
+    # def getSupplementalInfoOutput(self):
+    #     """
+    #     Returns a (potentially empty) list of lists of outputs for each supplemental information handler in the ODS
+    #     Each output in the list corresponds to the key in the list of sorted keys at the same list index.
+    #     """
+    #     supplementalInfoOutput = list()
 
-        for i, supplementalInfoHandler in enumerate(self.supplementalInfoHandlers):
-            supplementalInfoOutput.append(
-                (supplementalInfoHandler.getFormattedOutput(self.outputDataDictionaries[key][SUP_INFO_KEY][i]) 
-                    for key in self.sortedKeys)
-            )
+    #     for i, supplementalInfoHandler in enumerate(self.supplementalInfoHandlers):
+    #         supplementalInfoOutput.append(
+    #             [supplementalInfoHandler.getFormattedOutput(self.outputDataDictionaries[key][SUP_INFO_KEY][i]) 
+    #                 for key in self.sortedKeys]
+    #         )
         
-        return supplementalInfoOutput
+    #     return supplementalInfoOutput
 
 
 class RelativePosODS(OutputDataStratifier):
@@ -244,8 +244,7 @@ class RelativePosODS(OutputDataStratifier):
                  encompassingFeature: EncompassingData, centerRelativePos, extraRangeRadius, outputName):
         """
         Uses the size of the given encompassing feature to set up the given layer of the output data structure using the range of values encompassed.
-        If center range is true, the "0" position in the dictionary is the middle of the range, rounded up.
-        If prepForHalfBases is true, half positions are incorporated into the dictionary (but may not be incorporated into final output).
+        If centerRelativePos is true, the "0" position in the dictionary is the middle of the range, rounded up.
         extraRangeRadius adds 2*[value] positions to the given range. 
         """
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName)
@@ -312,7 +311,7 @@ class RelativePosODS(OutputDataStratifier):
         """       
         if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousRelativePos:
 
-            # We also need to keep track of whether or half and int positions have been used at least once.
+            # We also need to keep track of whether or not half and int positions have been used at least once.
             if not self.usedIntPosition and encompassedFeature.positionRelativeToEncompassingData in self.relativePosIntPositions:
                 self.usedIntPosition = True
             if not self.usedHalfPosition and encompassedFeature.positionRelativeToEncompassingData in self.relativePosHalfPositions:
@@ -339,6 +338,8 @@ class RelativePosODS(OutputDataStratifier):
         outputKeys = sorted(outputKeys)
 
         if self.ambiguityHandling == AmbiguityHandling.record: outputKeys.append(None)
+
+        return outputKeys
 
 
     def formatKeyForOutput(self, key):
@@ -446,8 +447,8 @@ class EncompassingFeatureODS(OutputDataStratifier):
         return super().getSortedKeysForOutput()
 
 
-    def formatKeyForOutput(self, key):
-        if key is None: return key
+    def formatKeyForOutput(self, key) -> str:
+        if key is None: return str(key)
         else: return key.getLocationString()
 
 
@@ -499,8 +500,8 @@ class EncompassedFeatureODS(OutputDataStratifier):
         return super().getSortedKeysForOutput()
 
 
-    def formatKeyForOutput(self, key):
-        if key is None: return key
+    def formatKeyForOutput(self, key) -> str:
+        if key is None: return str(key)
         else: return key.getLocationString()
 
 
@@ -570,8 +571,8 @@ class PlaceholderODS(OutputDataStratifier):
     Useful to ensure that the previous stratifier is organized within a single column instead of rows.
     """
 
-    def __init__(self, outputDataDictionaries, outputName = "Counts"):
-        super().__init__(AmbiguityHandling.tolerate, outputDataDictionaries, outputName=outputName)
+    def __init__(self, outputDataDictionaries, ambiguityHandling = AmbiguityHandling.tolerate, outputName = None):
+        super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
 
         for dictionary in self.outputDataDictionaries: dictionary[None] = 0
         self.allKeys.add(None)
