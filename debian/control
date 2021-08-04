@@ -9,4 +9,4 @@ X-Python3-Version: >= 3.7
 Package: python3-benbiohelpers
 Architecture: all
 Description: A collection of scripts for general use in bioinformatics projects.
-Depends: ${python3:Depends}, ${misc:Depends}
+Depends: ${python3:Depends}, ${misc:Depends}, python3-tk
