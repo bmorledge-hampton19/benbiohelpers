@@ -1,6 +1,9 @@
 # This script contains two data objects that represent the inputs from two files in the related "ThisInThatCounter".
 # These objects are meant to be inherited from and overridden as necessary.
 
+ENCOMPASSED_DATA = 1
+ENCOMPASSING_DATA = 2
+
 class EncompassedData:
     """
     Stores data on each of the features that are expected to be encompassed by the second feature 
@@ -23,8 +26,9 @@ class EncompassedData:
     def __eq__(self, other) -> bool:
         return (self.__key()) == (other.__key())
 
+    # NOTE: Does not take into account strand.
     def __lt__(self, other) -> bool:
-        return (self.__key()) < (other.__key())
+        return (self.__key()[:2]) < (other.__key())
 
     def setLocationData(self, acceptableChromosomes):
         """
@@ -108,9 +112,10 @@ class EncompassingData:
 
     def __eq__(self, other) -> bool:
         return (self.__key()) == (other.__key())
-    
+
+    # NOTE: Does not take into account strand.
     def __lt__(self, other) -> bool:
-        return (self.__key()) < (other.__key())
+        return (self.__key()[:3]) < (other.__key()[:3])
 
     def setLocationData(self, acceptableChromosomes):
         """

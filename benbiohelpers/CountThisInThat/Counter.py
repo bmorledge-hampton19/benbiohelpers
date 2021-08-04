@@ -4,7 +4,7 @@
 from abc import ABC, abstractmethod
 import warnings, subprocess
 from typing import List
-from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData
+from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData, ENCOMPASSED_DATA, ENCOMPASSING_DATA
 from benbiohelpers.CountThisInThat.CounterOutputDataHandler import CounterOutputDataHandler
 
 
@@ -25,7 +25,7 @@ class ThisInThatCounter(ABC):
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 
                  outputFilePath, acceptableChromosomes = None, checkForSortedFiles = (True,True),
                  headersInEncompassedFeatures = False, headersInEncompassingFeatures = False,
-                 encompassingFeatureExtraRadius = 0):
+                 encompassingFeatureExtraRadius = 0, writeIncrementally = 0):
 
         self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath, checkForSortedFiles)
 
@@ -35,6 +35,7 @@ class ThisInThatCounter(ABC):
 
         # Store the other arguments passed to the constructor
         self.outputFilePath = outputFilePath
+        self.writeIncrementally = writeIncrementally # 0 by default, or one of the two constants: ENCOMPASSED_DATA or ENCOMPASSING_DATA
         self.acceptableChromosomes = acceptableChromosomes
         self.encompassingFeatureExtraRadius = encompassingFeatureExtraRadius
 
@@ -48,9 +49,11 @@ class ThisInThatCounter(ABC):
         self.readNextEncompassedFeature()
         self.readNextEncompassingFeature()
 
-        # Set up data structures for the output data and encompassed features confirmed to be within encompassing features.
+        # Set up data structures for the output data and tracking the state of encompassed features.
         self.setUpOutputDataHandler()
         self.confirmedEncompassedFeatures: List[EncompassedData] = list()
+        self.featuresToStopTracking = set()
+        self.lastNonEncompassedFeature = None
 
         # This is normally called within readNextEncompassingFeature, but for the first pass, the output data handler doesn't exist.
         # So... Call it now instead!
@@ -91,6 +94,7 @@ class ThisInThatCounter(ABC):
         # Was the last feature actually encompassed? If not, pass it to the output data structure to be handled.
         if self.currentEncompassedFeature is not None and not self.isCurrentEncompassedFeatureActuallyEncompassed:
             self.outputDataHandler.onNonCountedEncompassedFeature(self.currentEncompassedFeature)
+            self.lastNonEncompassedFeature = self.currentEncompassedFeature
         self.isCurrentEncompassedFeatureActuallyEncompassed = False
 
         # Read in the next line.
@@ -102,6 +106,14 @@ class ThisInThatCounter(ABC):
         # Otherwise, read in the next encompassed feature.
         else:
             self.currentEncompassedFeature = self.constructEncompassedFeature(nextLine)
+
+        # If we are writing encompassed positions individually, have we passed the position of the last non-encompassed feature?  
+        # If so, be sure to write it!
+        if self.writeIncrementally == ENCOMPASSED_DATA and self.lastNonEncompassedFeature is not None and (
+            self.currentEncompassedFeature is None or self.lastNonEncompassedFeature < self.currentEncompassedFeature
+        ):
+            self.outputDataHandler.writeWaitingFeatures()
+            self.lastNonEncompassedFeature = None
 
     def constructEncompassedFeature(self, line) -> EncompassedData:
         """
@@ -157,7 +169,8 @@ class ThisInThatCounter(ABC):
         Should probably be implemented to run one or more of the template functions in CounterOutputData or a child of it,
         but by default this sets up a very simple output data structure which just counts instances of encompassment.
         """
-        self.outputDataHandler = CounterOutputDataHandler()
+        self.outputDataHandler = CounterOutputDataHandler(self.writeIncrementally)
+        self.outputDataHandler.createOutputDataWriter(self.outputFilePath)
 
 
     def reconcileChromosomes(self):
@@ -199,6 +212,18 @@ class ThisInThatCounter(ABC):
                 encompassedFeature.position <= encompassingFeature.endPos + self.encompassingFeatureExtraRadius)
 
 
+    def isExitingEncompassment(self, encompassedFeature: EncompassedData):
+        """
+        Returns a boolean value representing whether or not the feature is exiting encompassment with the given new encompassing feature.
+        Also, if the feature is exiting encompassment, send it to the output data handler.
+        """
+        if (encompassedFeature.position < self.currentEncompassingFeature.startPos - self.encompassingFeatureExtraRadius or 
+            encompassedFeature.chromosome != self.currentEncompassingFeature.chromosome):
+            self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(encompassedFeature, self.previousEncompassingFeature, True)
+            return True
+        else: return False
+
+
     def checkConfirmedEncompassedFeatures(self):    
         """
         For all encompassed features that are confirmed to be within the previous encompassing feature, figure out how to handle them
@@ -209,29 +234,19 @@ class ThisInThatCounter(ABC):
 
         # If this is the final validity check (no remaining encompassing features), all waiting features are exiting encompassment.
         if self.currentEncompassingFeature is None:
-            featuresExitingEncompassment = self.confirmedEncompassedFeatures.copy()
+            for feature in self.confirmedEncompassedFeatures:
+                self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.previousEncompassingFeature, True)
+            self.confirmedEncompassedFeatures.clear()
         # Otherwise, check them against the range of the newest encompassing feature.
-        else:
-            featuresExitingEncompassment = [feature for feature in self.confirmedEncompassedFeatures 
-                                            if feature.position < self.currentEncompassingFeature.startPos - self.encompassingFeatureExtraRadius or 
-                                            feature.chromosome != self.currentEncompassingFeature.chromosome]
-
-        # Handle all the features exiting encompassment.
-        for feature in featuresExitingEncompassment:
-            self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.previousEncompassingFeature, True)
-
-        # Separate out any remaining features.
-        self.confirmedEncompassedFeatures = list(set(self.confirmedEncompassedFeatures) - set(featuresExitingEncompassment))
+        else: self.confirmedEncompassedFeatures = [feature for feature in self.confirmedEncompassedFeatures if not self.isExitingEncompassment(feature)]
 
         # Next, reprocess all remaining features, provided they are not ahead of the encompassing feature's range.
-        featuresToStopTracking = list()
         for feature in self.confirmedEncompassedFeatures:
             if self.isEncompassedFeatureWithinEncompassingFeature(feature):
-                if not self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False):
-                    featuresToStopTracking.append(feature)
+                self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False)
 
-        # Remove any features that don't need to be tracked anymore.
-        self.confirmedEncompassedFeatures = list(set(self.confirmedEncompassedFeatures) - set(featuresToStopTracking))
+        # Tell the output data handler to write the current set of features if incremental writing is requested.
+        if self.writeIncrementally != 0: self.outputDataHandler.writeWaitingFeatures()
 
 
     def count(self):
@@ -253,10 +268,9 @@ class ThisInThatCounter(ABC):
             while not self.isEncompassedFeaturePastEncompassingFeature():
 
                 # Check for any features with confirmed encompassment.
-                if self.isEncompassedFeatureWithinEncompassingFeature(): 
-                    if self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(self.currentEncompassedFeature, 
-                                                                                        self.currentEncompassingFeature, False):
-                        self.confirmedEncompassedFeatures.append(self.currentEncompassedFeature)
+                if self.isEncompassedFeatureWithinEncompassingFeature():
+                    self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(self.currentEncompassedFeature, self.currentEncompassingFeature, False)
+                    self.confirmedEncompassedFeatures.append(self.currentEncompassedFeature)
                     self.isCurrentEncompassedFeatureActuallyEncompassed = True
 
                 # Get data on the next encompassed feature.
@@ -275,9 +289,6 @@ class ThisInThatCounter(ABC):
         self.encompassedFeaturesFile.close()
         self.encompassingFeaturesFile.close()
 
-
-    def writeResults(self, customStratifyingNames = None):
-        """
-        Use the output data handler to write the output data.
-        """
-        self.outputDataHandler.writeResults(self.outputFilePath, customStratifyingNames)
+        # Write (or finish writing) as necessary.
+        if self.writeIncrementally: self.outputDataHandler.writer.finishIndividualFeatureWriting()
+        else: self.outputDataHandler.writer.writeResults()
