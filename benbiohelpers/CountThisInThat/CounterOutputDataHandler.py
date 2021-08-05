@@ -148,7 +148,7 @@ class CounterOutputDataHandler:
         for outputDataStratifier in self.outputDataStratifiers:
             ambiguityHandling = outputDataStratifier.ambiguityHandling
             if ambiguityHandling is not AmbiguityHandling.tolerate: self.nontolerantAmbiguityHandling = True
-            if ambiguityHandling is AmbiguityHandling.ignore: 
+            if ambiguityHandling is AmbiguityHandling.ignore:
                 self.ignoreAmbiguityODSs.append(outputDataStratifier)
                 if self.countAllEncompassed: warnings.warn("Ignoring ambiguity is pointless when counting all encompassed features.")
 
@@ -156,23 +156,24 @@ class CounterOutputDataHandler:
                                        oDSSubs = oDSSubs, customStratifyingNames = customStratifyingNames,
                                        getCountDerivatives = getCountDerivatives)
 
+        if self.encompassedFeaturesToWrite is not None or self.encompassingFeaturesToWrite is not None:
+            assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
+                "Cannot write individual features unless leading ODS is an encompassed/encompassing feature ODS."
+            )
+
 
     def writeWaitingFeatures(self):
         """
         Writes any waiting features, with the guarantee that they will not be seen again due to the sorting imposed on the input files.
-
-        IMPORTANT: It is technically possible for a feature to be brought up again if stratifying on some feature that is not directly
-                   determined by position and ambiguity handling is set to "ignore."  Right no, no ODS's handle any such data, but it
-                   is something to consider for the future.
         """
         if self.encompassedFeaturesToWrite is not None:
-            for encompassedFeature in self.encompassedFeaturesToWrite:
+            for encompassedFeature in sorted(self.encompassedFeaturesToWrite):
                 self.writer.writeFeature(encompassedFeature)
                 self.outputDataStructure.pop(encompassedFeature)
             self.encompassedFeaturesToWrite.clear()
 
         if self.encompassingFeaturesToWrite is not None:
-            for encompassingFeature in self.encompassingFeaturesToWrite:
+            for encompassingFeature in sorted(self.encompassingFeaturesToWrite):
                 self.writer.writeFeature(encompassingFeature)
                 self.outputDataStructure.pop(encompassingFeature)
             self.encompassingFeaturesToWrite.clear()
@@ -293,16 +294,22 @@ class CounterOutputDataHandler:
         # If we are not exiting encompassment, and don't have nontolerant ambiguity handling, count the feature!
         if not exitingEncompassment and not self.nontolerantAmbiguityHandling: self.countFeature(encompassedFeature, encompassingFeature)
 
-        # Otherwise, if we are exiting encompassment and do have nontolerant ambiguity handling, check for ambiguity ignorers.
-        elif exitingEncompassment and self.nontolerantAmbiguityHandling:
+        # Otherwise, if we are exiting encompassment check for nontolerant ambiguity handling, and recording features for incremental writing.
+        elif exitingEncompassment:
 
-            ignoreFeature = False
-            for oDS in self.ignoreAmbiguityODSs:
-                if oDS.getRelevantKey(encompassedFeature) is None: ignoreFeature = True
-            
-            # If this feature should be ignored, pass it along as "non-counted".  Otherwise, count it!
-            if ignoreFeature: self.onNonCountedEncompassedFeature(encompassedFeature, encompassingFeature)
-            else: self.countFeature(encompassedFeature, encompassingFeature)
+            if not self.nontolerantAmbiguityHandling and self.encompassedFeaturesToWrite is not None:
+                self.encompassedFeaturesToWrite.add(encompassedFeature)
+
+            else:
+                ignoreFeature = False
+                for oDS in self.ignoreAmbiguityODSs:
+                    if oDS.getRelevantKey(encompassedFeature) is None: ignoreFeature = True
+                
+                # If this feature should be ignored, pass it along as "non-counted".  Otherwise, count it!
+                if ignoreFeature: self.onNonCountedEncompassedFeature(encompassedFeature, encompassingFeature)
+                else: 
+                    self.countFeature(encompassedFeature, encompassingFeature)
+                    if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
 
 
 class OutputDataWriter():
@@ -448,7 +455,7 @@ class OutputDataWriter():
                 self.setDataCol(stratificationLevel + supplementalInfoCount + i, str(currentDataObject[key]))
             self.currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(False)
             if isinstance(self.currentDataRow[0],list):
-                self.outputFile.write('\t'.join(('\t'.join(self.currentDataRow[0]), self.currentDataRow[1:])) + '\n')
+                self.outputFile.write('\t'.join(['\t'.join(self.currentDataRow[0])] + self.currentDataRow[1:]) + '\n')
             else: self.outputFile.write('\t'.join(self.currentDataRow) + '\n')
 
 
@@ -457,10 +464,6 @@ class OutputDataWriter():
         Writes individual features as they cease to be tracked instead of all at once at the end.  (Should be more memory efficient)
         Also, this method preserves bed formatting for those features if the output file has the .bed extension.
         """
-
-        assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
-            "Cannot write individual features unless leading ODS is an encompassed/encompassing feature ODS."
-        )
 
         # If we are preserving bed format, prepare the data row based on the number of headers, taking
         # into account any ODSSubs.
@@ -482,12 +485,11 @@ class OutputDataWriter():
         self.writeDataRows(self.outputDataStructure[featureToWrite], 1, len(supplementalInfoHandlers))
 
 
-    def finishIndividualFeatureWriting(self, outputFilePath):
+    def finishIndividualFeatureWriting(self):
         """
         Sorts the results of individual feature writing, as features are not guaranteed to be written in the same order
         as the input files.
         """
-        subprocess.run(("sort","-k1,1","-k2,2n",outputFilePath,"-o",outputFilePath), check = True)
         self.outputFile.close()
 
 

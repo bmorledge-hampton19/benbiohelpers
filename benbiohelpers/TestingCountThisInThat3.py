@@ -4,7 +4,7 @@ import timeit
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
-from benbiohelpers.CountThisInThat.InputDataStructures import TfbsData
+from benbiohelpers.CountThisInThat.InputDataStructures import TfbsData, ENCOMPASSED_DATA
 from benbiohelpers.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
 from benbiohelpers.CountThisInThat.SupplementalInformation import TfbsSupInfoHandler
 
@@ -23,7 +23,8 @@ class MutationsInTfbsCounter(ThisInThatCounter):
 
 def testingCountThisInThat3(mutationPosFilePath, tFBSPosFilePath, outputFilePath):
 
-    counter = MutationsInTfbsCounter(mutationPosFilePath, tFBSPosFilePath, outputFilePath)
+    #counter = MutationsInTfbsCounter(mutationPosFilePath, tFBSPosFilePath, outputFilePath)
+    counter = MutationsInTfbsCounter(mutationPosFilePath, tFBSPosFilePath, outputFilePath, writeIncrementally = ENCOMPASSED_DATA)
     counter.count()
 
 
@@ -31,9 +32,9 @@ def main():
 
     # Create the Tkinter UI
     dialog = TkinterDialog(workingDirectory=getDataDirectory())
-    dialog.createFileSelector("Bed Mutation Data:",0,("Bed Files",".bed"))    
+    dialog.createFileSelector("Bed Mutation Data:",0,("Bed Files",".bed"))
     dialog.createFileSelector("TFBS Positions:",1,("Bed Files",".bed"))
-    dialog.createFileSelector("Output File:",2,("TSV Files",".tsv"), newFile = True)
+    dialog.createFileSelector("Output File:",2,("TSV Files",".tsv"), ("Bed Files",".bed"), newFile = True)
 
     # Run the UI
     dialog.mainloop()

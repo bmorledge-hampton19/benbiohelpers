@@ -28,7 +28,7 @@ class EncompassedData:
 
     # NOTE: Does not take into account strand.
     def __lt__(self, other) -> bool:
-        return (self.__key()[:2]) < (other.__key())
+        return (self.__key()[:2]) < (other.__key()[:2])
 
     def setLocationData(self, acceptableChromosomes):
         """

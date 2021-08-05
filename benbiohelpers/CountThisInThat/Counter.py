@@ -46,14 +46,13 @@ class ThisInThatCounter(ABC):
         # Read in the first entry in each file (as the information within may be important to setting up output data structures)
         self.currentEncompassedFeature = None
         self.currentEncompassingFeature = None
+        self.lastNonEncompassedFeature = None
         self.readNextEncompassedFeature()
         self.readNextEncompassingFeature()
 
         # Set up data structures for the output data and tracking the state of encompassed features.
         self.setUpOutputDataHandler()
         self.confirmedEncompassedFeatures: List[EncompassedData] = list()
-        self.featuresToStopTracking = set()
-        self.lastNonEncompassedFeature = None
 
         # This is normally called within readNextEncompassingFeature, but for the first pass, the output data handler doesn't exist.
         # So... Call it now instead!
@@ -93,6 +92,15 @@ class ThisInThatCounter(ABC):
 
         # Was the last feature actually encompassed? If not, pass it to the output data structure to be handled.
         if self.currentEncompassedFeature is not None and not self.isCurrentEncompassedFeatureActuallyEncompassed:
+
+            # If we are writing encompassed positions individually, do we have a large number of features waiting to be written?
+            # If so, this means we are trackign non-encompassed features and we have a large stretch between encompassing features.
+            # So, to prevent the non-encompassed features from filling up memory, write them!
+            if self.writeIncrementally == ENCOMPASSED_DATA and len(self.outputDataHandler.encompassedFeaturesToWrite) > 10000 and (
+                self.lastNonEncompassedFeature < self.currentEncompassedFeature
+            ):
+                self.outputDataHandler.writeWaitingFeatures()
+
             self.outputDataHandler.onNonCountedEncompassedFeature(self.currentEncompassedFeature)
             self.lastNonEncompassedFeature = self.currentEncompassedFeature
         self.isCurrentEncompassedFeatureActuallyEncompassed = False
@@ -103,17 +111,12 @@ class ThisInThatCounter(ABC):
         # Check if EOF has been reached.
         if len(nextLine) == 0: 
             self.currentEncompassedFeature = None
+            self.outputDataHandler.writeWaitingFeatures() # Make sure all waiting features are written at EOF.
         # Otherwise, read in the next encompassed feature.
         else:
             self.currentEncompassedFeature = self.constructEncompassedFeature(nextLine)
 
-        # If we are writing encompassed positions individually, have we passed the position of the last non-encompassed feature?  
-        # If so, be sure to write it!
-        if self.writeIncrementally == ENCOMPASSED_DATA and self.lastNonEncompassedFeature is not None and (
-            self.currentEncompassedFeature is None or self.lastNonEncompassedFeature < self.currentEncompassedFeature
-        ):
-            self.outputDataHandler.writeWaitingFeatures()
-            self.lastNonEncompassedFeature = None
+        
 
     def constructEncompassedFeature(self, line) -> EncompassedData:
         """
