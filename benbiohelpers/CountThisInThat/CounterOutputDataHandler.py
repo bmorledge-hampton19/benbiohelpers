@@ -289,25 +289,24 @@ class CounterOutputDataHandler:
         # First, update the encompassed feature and supplemental information based on the given encompassing feature unless it is exiting encompassment.
         if not exitingEncompassment: self.updateODSs(encompassedFeature, encompassingFeature)
 
-        # If we are not exiting encompassment, and don't have nontolerant ambiguity handling, count the feature!
-        if not exitingEncompassment and not self.nontolerantAmbiguityHandling: self.countFeature(encompassedFeature, encompassingFeature)
+        # If we don't have nontolerant ambiguity handling, and are not exiting encompassment, count the feature!
+        # Otherwise, if we are exiting encompassment, check to see if we need to add this to the list of features to write.
+        if not self.nontolerantAmbiguityHandling: 
+            if not exitingEncompassment: self.countFeature(encompassedFeature, encompassingFeature)
+            elif self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
 
-        # Otherwise, if we are exiting encompassment check for nontolerant ambiguity handling, and recording features for incremental writing.
+        # If we have nontolerant ambiguity handling and are exiting encompassment, handle the features accordingly.
         elif exitingEncompassment:
 
-            if not self.nontolerantAmbiguityHandling and self.encompassedFeaturesToWrite is not None:
-                self.encompassedFeaturesToWrite.add(encompassedFeature)
-
-            else:
-                ignoreFeature = False
-                for oDS in self.ignoreAmbiguityODSs:
-                    if oDS.getRelevantKey(encompassedFeature) is None: ignoreFeature = True
-                
-                # If this feature should be ignored, pass it along as "non-counted".  Otherwise, count it!
-                if ignoreFeature: self.onNonCountedEncompassedFeature(encompassedFeature, encompassingFeature)
-                else: 
-                    self.countFeature(encompassedFeature, encompassingFeature)
-                    if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
+            ignoreFeature = False
+            for oDS in self.ignoreAmbiguityODSs:
+                if oDS.getRelevantKey(encompassedFeature) is None: ignoreFeature = True
+            
+            # If this feature should be ignored, pass it along as "non-counted".  Otherwise, count it!
+            if ignoreFeature: self.onNonCountedEncompassedFeature(encompassedFeature, encompassingFeature)
+            else: 
+                self.countFeature(encompassedFeature, encompassingFeature)
+                if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
 
 
 class OutputDataWriter():
