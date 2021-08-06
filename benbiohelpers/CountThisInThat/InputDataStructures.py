@@ -74,6 +74,10 @@ class EncompassedDataWithContext(EncompassedData):
         self.context = self.choppedUpLine[3]
         self.alteredTo = self.choppedUpLine[4]
 
+    def getMutation(self):
+        if '>' in self.alteredTo: return self.alteredTo
+        else: return self.context + '>' + self.alteredTo
+
 
 class EncompassedDataDefaultStrand(EncompassedData):
     """
@@ -158,10 +162,12 @@ class EncompassingDataDefaultStrand(EncompassingData):
         if acceptableChromosomes is not None and self.chromosome not in acceptableChromosomes:
             raise ValueError(self.chromosome + " is not a valid chromosome for this genome.")
 
+
 class TfbsData(EncompassingData):
     """
     Like encompassing data, but with the name of the transcription factor binding site.
     """
 
     def setOtherData(self):
+        self.sequence = self.choppedUpLine[4]
         self.tfbsName = self.choppedUpLine[6] # Might need to change the column number here...

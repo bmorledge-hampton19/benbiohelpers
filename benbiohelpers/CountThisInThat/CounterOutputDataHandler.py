@@ -27,8 +27,6 @@ class CounterOutputDataHandler:
         self.trackAllEncompassed = trackAllEncompassed
         self.countAllEncompassed = countAllEncompassed
         assert not self.countAllEncompassed or self.trackAllEncompassed, "All encompassed features cannot be counted if they aren't tracked."
-        self.updateSupInfoUntilExit = False
-        self.updateSupInfoOnCount = False
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
         self.nontolerantAmbiguityHandling = False # To start, there is no non-tolerant ambiguity handling.
@@ -124,18 +122,18 @@ class CounterOutputDataHandler:
 
 
     def addSupplementalInformationHandler(self, supplementalInfoClass: Type[SupplementalInformationHandler], 
-                                          stratificationLevel, outputName = None):
+                                          stratificationLevel, defaultArgs = True, outputName = None,
+                                          updateUntilExit = None, updateOnCount = None):
         """
         Adds the specified supplemental information handler to the given stratification level.
         Keep in mind that SIH's cannot be added to the bottom level stratifier, as they store information in the specified
         level's child stratifier.
         If outputName is set to None, the default output name is used.
         """
-        self.updateSupInfoUntilExit = True
-        if outputName is None:
+        if defaultArgs:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass())
         else:
-            self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName))
+            self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName, updateUntilExit, updateOnCount))
 
 
     def createOutputDataWriter(self, outputFilePath: str, oDSSubs: List = None, 
@@ -183,16 +181,16 @@ class CounterOutputDataHandler:
         """
         Updates all relevant values in each ODS using the current encompassed and encompassing features.
         """
-            
+
         for outputDataStratifier in self.outputDataStratifiers: 
             outputDataStratifier.updateConfirmedEncompassedFeature(encompassedFeature, encompassingFeature)
-            if self.updateSupInfoUntilExit and outputDataStratifier is not self.outputDataStratifiers[-1]:
+            if outputDataStratifier is not self.outputDataStratifiers[-1]:
                 if outputDataStratifier is self.outputDataStratifiers[0]: currentODSDict = self.outputDataStructure
                 currentODSDict = currentODSDict[outputDataStratifier.getRelevantKey(encompassedFeature)]
-                for z, supplementalInfoHandler in enumerate(outputDataStratifier.supplementalInfoHandlers):
-                    currentODSDict[SUP_INFO_KEY][z] = supplementalInfoHandler.updateSupplementalInfo(currentODSDict[SUP_INFO_KEY][z], 
-                                                                                                     encompassedFeature, encompassingFeature)
-                
+                for i, supplementalInfoHandler in enumerate(outputDataStratifier.supplementalInfoHandlers):
+                    if supplementalInfoHandler.updateUntilExit:
+                        currentODSDict[SUP_INFO_KEY][i] = supplementalInfoHandler.updateSupplementalInfo(currentODSDict[SUP_INFO_KEY][i], 
+                                                                                                         encompassedFeature, encompassingFeature)
 
 
     def onNonCountedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData = None):
@@ -233,8 +231,8 @@ class CounterOutputDataHandler:
         currentODSDict = self.outputDataStructure
         for outputDataStratifier in self.outputDataStratifiers[:-1]:
             currentODSDict = currentODSDict[outputDataStratifier.getRelevantKey(encompassedFeature)]
-            if self.updateSupInfoOnCount:
-                for i, supplementalInfoHandler in enumerate(outputDataStratifier.supplementalInfoHandlers):
+            for i, supplementalInfoHandler in enumerate(outputDataStratifier.supplementalInfoHandlers):
+                if supplementalInfoHandler.updateOnCount:
                     currentODSDict[SUP_INFO_KEY][i] = supplementalInfoHandler.updateSupplementalInfo(currentODSDict[SUP_INFO_KEY][i], 
                                                                                                      encompassedFeature, encompassingFeature)
         currentODSDict[self.outputDataStratifiers[-1].getRelevantKey(encompassedFeature)] += 1
@@ -414,7 +412,7 @@ class OutputDataWriter():
             self.currentDataRow[dataLevel] = value
         elif self.oDSSubs[dataLevel] is None:
             self.currentDataRow[self.oDSSubs[:dataLevel].count(None)] = value
-        else: self.currentDataRow[1][self.oDSSubs[dataLevel]] = value
+        else: self.currentDataRow[0][self.oDSSubs[dataLevel]] = value
 
 
     def getOutputName(self, stratificationLevel, key):

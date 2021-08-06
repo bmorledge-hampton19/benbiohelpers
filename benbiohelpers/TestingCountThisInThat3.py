@@ -4,9 +4,9 @@ import timeit
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.CountThisInThat.Counter import ThisInThatCounter
-from benbiohelpers.CountThisInThat.InputDataStructures import TfbsData, ENCOMPASSED_DATA
+from benbiohelpers.CountThisInThat.InputDataStructures import TfbsData, EncompassedDataWithContext, ENCOMPASSED_DATA
 from benbiohelpers.CountThisInThat.CounterOutputDataHandler import AmbiguityHandling, CounterOutputDataHandler
-from benbiohelpers.CountThisInThat.SupplementalInformation import TfbsSupInfoHandler
+from benbiohelpers.CountThisInThat.SupplementalInformation import TfbsSupInfoHandler, BaseInEncompassingSequenceSupInfoHandler, MutationTypeSupInfoHandler
 
 class MutationsInTfbsCounter(ThisInThatCounter):
 
@@ -15,10 +15,15 @@ class MutationsInTfbsCounter(ThisInThatCounter):
         self.outputDataHandler.addEncompassedFeatureStratifier("Mutation Position")
         self.outputDataHandler.addPlaceholderStratifier(AmbiguityHandling.record)
         self.outputDataHandler.addSupplementalInformationHandler(TfbsSupInfoHandler, 0)
-        self.outputDataHandler.createOutputDataWriter(self.outputFilePath, customStratifyingNames = (None,{None:"Counts"}))
+        self.outputDataHandler.addSupplementalInformationHandler(BaseInEncompassingSequenceSupInfoHandler, 0)
+        self.outputDataHandler.addSupplementalInformationHandler(MutationTypeSupInfoHandler, 0)
+        self.outputDataHandler.createOutputDataWriter(self.outputFilePath, customStratifyingNames = (None,{None:"Counts"}), oDSSubs=(None, None, None, 4, None))
 
     def constructEncompassingFeature(self, line) -> TfbsData:
         return TfbsData(line, self.acceptableChromosomes)
+
+    def constructEncompassedFeature(self, line) -> EncompassedDataWithContext:
+        return EncompassedDataWithContext(line, self.acceptableChromosomes)
 
 
 def testingCountThisInThat3(mutationPosFilePath, tFBSPosFilePath, outputFilePath):

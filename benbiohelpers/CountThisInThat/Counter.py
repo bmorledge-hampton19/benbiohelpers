@@ -71,7 +71,7 @@ class ThisInThatCounter(ABC):
         if checkForSortedFiles[0]:
             print("Checking encompassed features file for proper sorting...")
             try:
-                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassedFeaturesFilePath))
+                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassedFeaturesFilePath))
             except subprocess.CalledProcessError:
                 print("Encompassed features file is not properly sorted.")
                 quit()
@@ -79,7 +79,7 @@ class ThisInThatCounter(ABC):
         if checkForSortedFiles[1]:
             print("Checking encompassing features file for proper sorting...")
             try:
-                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-c", encompassingFeaturesFilePath))
+                subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassingFeaturesFilePath))
             except subprocess.CalledProcessError:
                 print("Encompassing features file is not properly sorted.")
                 quit()
@@ -109,9 +109,8 @@ class ThisInThatCounter(ABC):
         nextLine = self.encompassedFeaturesFile.readline()
 
         # Check if EOF has been reached.
-        if len(nextLine) == 0: 
+        if not nextLine: 
             self.currentEncompassedFeature = None
-            self.outputDataHandler.writeWaitingFeatures() # Make sure all waiting features are written at EOF.
         # Otherwise, read in the next encompassed feature.
         else:
             self.currentEncompassedFeature = self.constructEncompassedFeature(nextLine)
@@ -287,6 +286,7 @@ class ThisInThatCounter(ABC):
 
         # Read through any remaining encompassed features in case we are recording non-encompassed features.
         while self.currentEncompassedFeature is not None: self.readNextEncompassedFeature()
+        self.outputDataHandler.writeWaitingFeatures() # Can catch any waiting encompassed features if there were no more encompassing features.
 
         # Close any open files.
         self.encompassedFeaturesFile.close()
