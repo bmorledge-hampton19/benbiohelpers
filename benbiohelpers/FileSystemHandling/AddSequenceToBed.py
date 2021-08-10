@@ -46,7 +46,7 @@ def addSequenceToBed(bedFilePath: str, genomeFastaFilePath: str, substitutionPos
                 assert not checkBedFile, "Extra bed line found: " + checkBedFile
 
     # Clean up files by deleting the intermediate sequences file and replacing the old bed file with the new one.
-    print("Success!  Deleting intermediate fasta sequences file and replacing old bed file...")
+    if verbose: print("Success!  Deleting intermediate fasta sequences file and replacing old bed file...")
     os.remove(fastaSequencesFilePath)
     os.replace(newBedFilePath, bedFilePath)
 
