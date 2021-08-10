@@ -319,6 +319,7 @@ class OutputDataWriter():
 
         The oDSSubs variable, if supplied, should contain a list of integers or NoneTypes equal in length to the number of headers in the output
         data.  Each integer is used to susbstitute information from the output data structures into the original data line at that column number.
+        If the integer "-1" is supplied, the data is skipped and never written.
         If ODSSubs is None, all data is simply appended to the line, and each NoneType entry has the same behavior as well.
 
         The customStratifyingNames variable, if supplied, should contain a list of dictionaries to convert keys to the desired string output.
@@ -409,6 +410,8 @@ class OutputDataWriter():
 
         if self.oDSSubs is None:
             self.currentDataRow[dataLevel] = value
+        elif self.oDSSubs[dataLevel] == -1:
+            pass
         elif self.oDSSubs[dataLevel] is None:
             self.currentDataRow[self.oDSSubs[:dataLevel].count(None)] = value
         else: self.currentDataRow[0][self.oDSSubs[dataLevel]] = value
