@@ -138,7 +138,7 @@ class ThisInThatCounter(ABC):
         nextLine = self.encompassingFeaturesFile.readline()
 
         # Check if EOF has been reached.
-        if len(nextLine) == 0: 
+        if not nextLine:
             self.currentEncompassingFeature = None
         # Otherwise, read in the next encompassing feature.
         else:
@@ -196,7 +196,7 @@ class ThisInThatCounter(ABC):
             return True
         elif self.currentEncompassedFeature.position > self.currentEncompassingFeature.endPos + self.encompassingFeatureExtraRadius:
             return True
-        elif not self.currentEncompassedFeature.chromosome == self.currentEncompassingFeature.chromosome:
+        elif self.currentEncompassedFeature.chromosome != self.currentEncompassingFeature.chromosome:
             return True
         else: 
             return False
@@ -286,9 +286,9 @@ class ThisInThatCounter(ABC):
 
         # Read through any remaining encompassed features in case we are recording non-encompassed features.
         while self.currentEncompassedFeature is not None: self.readNextEncompassedFeature()
-        self.outputDataHandler.writeWaitingFeatures() # Can catch any waiting encompassed features if there were no more encompassing features.
+        self.outputDataHandler.writeWaitingFeatures() # Can catch any waiting encompassed features.
 
-        # Close any open files.
+        # Close files open for reading.
         self.encompassedFeaturesFile.close()
         self.encompassingFeaturesFile.close()
 
