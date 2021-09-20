@@ -1,0 +1,15 @@
+Package: benbiohelpers
+Type: Package
+Title: A Collection of Helpful Functions for Bioinformatics in R
+Version: 0.1.0
+Author: Ben Morledge-Hampton
+Authors@R: person("Ben", "Morledge-Hampton", email = "b.morledge-hampton@wsu.edu",
+    role = c("aut", "cre"))
+Description: The R portion of my bioinformatics "toolbox" of functions that I 
+    think will be generally useful across different projects
+License: MIT
+Encoding: UTF-8
+LazyData: true
+Imports: data.table
+RoxygenNote: 7.1.1
+

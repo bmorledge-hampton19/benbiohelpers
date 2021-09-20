@@ -1,2 +1,2 @@
-# My_Python_Helpers
- Scripts meant to be imported into other projects to help out with common bioinformatics problems
+# benbiohelpers
+Scripts meant to be imported into other projects to help out with common bioinformatics problems
