@@ -220,22 +220,6 @@ class OutputDataStratifier(ABC):
         if formatted: return [self.formatKeyForOutput(key) for key in self.sortedKeys]
         else: return self.sortedKeys
 
-    ### Delete? ###
-    # def getSupplementalInfoOutput(self):
-    #     """
-    #     Returns a (potentially empty) list of lists of outputs for each supplemental information handler in the ODS
-    #     Each output in the list corresponds to the key in the list of sorted keys at the same list index.
-    #     """
-    #     supplementalInfoOutput = list()
-
-    #     for i, supplementalInfoHandler in enumerate(self.supplementalInfoHandlers):
-    #         supplementalInfoOutput.append(
-    #             [supplementalInfoHandler.getFormattedOutput(self.outputDataDictionaries[key][SUP_INFO_KEY][i]) 
-    #                 for key in self.sortedKeys]
-    #         )
-        
-    #     return supplementalInfoOutput
-
 
 class RelativePosODS(OutputDataStratifier):
     """
