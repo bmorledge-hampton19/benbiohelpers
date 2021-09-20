@@ -112,4 +112,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+### R ignores
 .Rproj.user
+
+### My ignores
+
+# Ignore test files
+/test.*
