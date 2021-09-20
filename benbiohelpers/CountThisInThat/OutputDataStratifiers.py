@@ -341,6 +341,39 @@ class RelativePosODS(OutputDataStratifier):
         return outputKeys
 
 
+class FeatureFractionODS(OutputDataStratifier):
+    """
+    An output data stratifier for classifying features based on what "fraction" of the encompassing feature they are in.
+    (e.g. this mutation is in the 2nd sixth of the gene.)
+    """
+
+    def __init__(self, ambiguityHandling, outputDataDictionaries, outputName, fractionNum):
+        """
+        Initialize the feature fraction ODS using the parent constructor and the "factionNum"
+        which is the number of "bins" to keep track of in each encompassing feature.
+        """
+        super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
+
+        self.fractionNum = fractionNum
+        for fraction in range(self.fractionNum): self.attemptAddKey(fraction)
+
+    
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+        """
+        Using the given features, determine what fraction the encompassed feature belongs in with respect to the 
+        encompassing feature.  Also, check for ambiguity as necessary.
+        """
+
+        # Determine the bin size for the given feature.
+        binSize = encompassingFeature.getLength()/self.fractionNum
+
+        # Obtain the position of the encompassed feature relative to the encompassing feature. (Taking strand into account)
+        if encompassingFeature.strand == '+': relativePos = encompassedFeature - encompassingFeature.startPos
+        else: relativePos = encompassingFeature.endPos - encompassedFeature.position
+
+        # Determine which bin the encompassed feature belongs in and update it accordingly.
+        encompassedBinNum = int(relativePos / binSize) + 1
+        encompassedFeature.updateStratifierData(type(self), encompassedFeature)
 
 
 class StrandComparisonODS(OutputDataStratifier):
