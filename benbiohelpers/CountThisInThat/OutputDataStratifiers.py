@@ -71,9 +71,7 @@ class OutputDataStratifier(ABC):
         self.childDataStratifier: OutputDataStratifier = None
         self.supplementalInfoHandlers: List[SupplementalInformationHandler] = list()
 
-        if self.ambiguityHandling == AmbiguityHandling.record:
-            for dictionary in self.outputDataDictionaries: dictionary[None] = 0
-            self.allKeys.add(None)
+        if self.ambiguityHandling == AmbiguityHandling.record: self.attemptAddKey(None)
 
 
     def addSuplementalInfo(self, supplementalInfoHandler: SupplementalInformationHandler):
@@ -179,21 +177,24 @@ class OutputDataStratifier(ABC):
         """
 
     
-    @abstractmethod
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
-        Retrieves the key associated with the given encompassed data for this level of stratification
-        NOTE: Derivatives of this function will return None even if the ambiguity handling is ignore.
+        Retrieves the key associated with the given encompassed data for this level of stratification.
+        By default, accesses the data in the encompassed feature's stratifierData dictionary and checks
+        ambiguity handling to decide whether or not to return a value.
         """
+        data, ambiguous = encompassedFeature.getStratifierData(type(self))
+        if self.ambiguityHandling == AmbiguityHandling.tolerate or not ambiguous: return data
+        else: return None
 
-    
-    @abstractmethod
+
     def getSortedKeysForOutput(self):
         """
         A function which implements some functionality previously handled by getKeysForOutput by
         sorting the list of keys properly formatted for output.  This function is defined separately
         and only called once since getKeysForOutput may be called many times, but sorting the keys
         may be computationally expensive.
+        By default, just uses default sort (and appends None, if applicable)
         """
         if None in self.allKeys:
             return sorted(self.allKeys - {None}) + [None]
@@ -201,10 +202,10 @@ class OutputDataStratifier(ABC):
             return sorted(self.allKeys)
 
 
-    @abstractmethod
     def formatKeyForOutput(self, key):
         """
         Performs any formatting necessary to prepare the key for output to a file.
+        By default, returns the key cconverted to a string.
         """
         return str(key)
 
@@ -212,7 +213,8 @@ class OutputDataStratifier(ABC):
     def getKeysForOutput(self, formatted = False):
         """
         Returns all keys that are suitable for output.
-        If formatted is true, the formatKeyForOutput function is called on the keys before returning.  Otherwise, the original keys (sorted) are returned.
+        If formatted is true, the formatKeyForOutput function is called on the keys before returning.  
+        Otherwise, the original keys (sorted) are returned.
         """
         if self.sortedKeys is None: self.sortedKeys = self.getSortedKeysForOutput()
         if formatted: return [self.formatKeyForOutput(key) for key in self.sortedKeys]
@@ -298,26 +300,23 @@ class RelativePosODS(OutputDataStratifier):
         else:
             relativePosition = encompassedFeature.position - encompassingFeature.startPos
 
-        if (encompassedFeature.positionRelativeToEncompassingData is not None and
-            encompassedFeature.positionRelativeToEncompassingData != relativePosition):
-            encompassedFeature.ambiguousRelativePos = True
-
-        encompassedFeature.positionRelativeToEncompassingData = relativePosition
+        encompassedFeature.updateStratifierData(type(self), relativePosition)
 
 
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         """
         Gets the position of the encompassed feature relative to its encompassing feature as the key.
         """       
-        if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousRelativePos:
+        relativePos, ambiguousRelativePos = encompassedFeature.getStratifierData(type(self))
+        if self.ambiguityHandling == AmbiguityHandling.tolerate or not ambiguousRelativePos:
 
             # We also need to keep track of whether or not half and int positions have been used at least once.
-            if not self.usedIntPosition and encompassedFeature.positionRelativeToEncompassingData in self.relativePosIntPositions:
+            if not self.usedIntPosition and relativePos in self.relativePosIntPositions:
                 self.usedIntPosition = True
-            if not self.usedHalfPosition and encompassedFeature.positionRelativeToEncompassingData in self.relativePosHalfPositions:
+            if not self.usedHalfPosition and relativePos in self.relativePosHalfPositions:
                 self.usedHalfPosition = True
 
-            return encompassedFeature.positionRelativeToEncompassingData
+            return relativePos
 
         else: return None
 
@@ -342,8 +341,6 @@ class RelativePosODS(OutputDataStratifier):
         return outputKeys
 
 
-    def formatKeyForOutput(self, key):
-        return super().formatKeyForOutput(key)
 
 
 class StrandComparisonODS(OutputDataStratifier):
@@ -368,19 +365,7 @@ class StrandComparisonODS(OutputDataStratifier):
         Checks the difference between strands on the current encompassed and encompassing features.
         """
         strandComparison = encompassedFeature.strand == encompassingFeature.strand
-        if (encompassedFeature.matchesEncompassingDataStrand is not None and 
-            encompassedFeature.matchesEncompassingDataStrand != strandComparison):
-            encompassedFeature.ambiguousStrandMatching = True
-        encompassedFeature.matchesEncompassingDataStrand = strandComparison
-
-
-    def getRelevantKey(self, encompassedFeature: EncompassedData):
-        """
-        Returns whether or not the strand of the encompassed feature matches its encompassing feature.
-        """
-        if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousStrandMatching:
-            return encompassedFeature.matchesEncompassingDataStrand
-        else: return None
+        encompassedFeature.updateStratifierData(type(self), strandComparison)
 
 
     def getSortedKeysForOutput(self):
@@ -389,10 +374,6 @@ class StrandComparisonODS(OutputDataStratifier):
         """
         if None in self.allKeys: return [True, False, None]
         else: return [True, False]
-
-
-    def formatKeyForOutput(self, key):
-        return super().formatKeyForOutput(key)
 
 
 class EncompassingFeatureODS(OutputDataStratifier):
@@ -412,9 +393,7 @@ class EncompassingFeatureODS(OutputDataStratifier):
         """
         Keep track of the feature encompassing the encompassed feature.
         """
-        if encompassedFeature.encompassingFeature is not encompassingFeature:
-            encompassedFeature.ambiguousEncompassingFeature = True
-        encompassedFeature.encompassingFeature = encompassingFeature
+        encompassedFeature.updateStratifierData(type(self), encompassingFeature)
 
 
     def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
@@ -428,24 +407,7 @@ class EncompassingFeatureODS(OutputDataStratifier):
         self.attemptAddKey(encompassingFeature)
 
 
-    def getRelevantKey(self, encompassedFeature: EncompassedData):
-        """
-        Retrieve the encompassing feature for the given encompassed feature and pass it back as a key.
-        """
-        if self.ambiguityHandling == AmbiguityHandling.tolerate or not encompassedFeature.ambiguousEncompassingFeature:
-            return encompassedFeature.encompassingFeature
-
-        else: return None
-
-
-    def getSortedKeysForOutput(self):
-        """
-        Leverage the '<' operator between EncompassedData objects to sort the keys directly.
-        """
-        return super().getSortedKeysForOutput()
-
-
-    def formatKeyForOutput(self, key) -> str:
+    def formatKeyForOutput(self, key: EncompassingData) -> str:
         if key is None: return str(key)
         else: return key.getLocationString()
 
@@ -491,14 +453,7 @@ class EncompassedFeatureODS(OutputDataStratifier):
         return encompassedFeature
 
 
-    def getSortedKeysForOutput(self):
-        """
-        Leverage the '<' operator between EncompassignData objects to sort the keys directly.
-        """
-        return super().getSortedKeysForOutput()
-
-
-    def formatKeyForOutput(self, key) -> str:
+    def formatKeyForOutput(self, key: EncompassedData) -> str:
         if key is None: return str(key)
         else: return key.getLocationString()
 
@@ -552,17 +507,6 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         return context
 
 
-    def getSortedKeysForOutput(self):
-        """
-        Return the sorted list of contexts seen throughout the encompassed features.
-        """
-        return super().getSortedKeysForOutput()
-
-
-    def formatKeyForOutput(self, key):
-        return super().formatKeyForOutput(key)
-
-
 class PlaceholderODS(OutputDataStratifier):
     """
     An output data stratifier which actually doesn't stratify by anything and just counts all encompassed features.
@@ -577,16 +521,8 @@ class PlaceholderODS(OutputDataStratifier):
 
 
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
-        return
+        return None
 
 
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         return None
-
-
-    def getSortedKeysForOutput(self):
-        return super().getSortedKeysForOutput()
-
-
-    def formatKeyForOutput(self, key):
-        return super().formatKeyForOutput(key)

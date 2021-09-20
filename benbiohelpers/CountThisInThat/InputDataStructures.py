@@ -1,5 +1,7 @@
 # This script contains two data objects that represent the inputs from two files in the related "ThisInThatCounter".
 # These objects are meant to be inherited from and overridden as necessary.
+from typing import Dict, Tuple, Type
+from benbiohelpers.CountThisInThat.OutputDataStratifiers import OutputDataStratifier
 
 ENCOMPASSED_DATA = 1
 ENCOMPASSING_DATA = 2
@@ -15,7 +17,7 @@ class EncompassedData:
         self.choppedUpLine = line.strip().split()
 
         self.setLocationData(acceptableChromosomes)
-        self.setOtherData()
+        self.stratifierData: Dict[Type[OutputDataStratifier], Tuple] = dict()
 
     def __key(self):
         return (self.chromosome, self.position, self.strand)
@@ -48,19 +50,20 @@ class EncompassedData:
     def getLocationString(self):
         return self.chromosome + ':' + str(self.position) + '(' + self.strand + ')'
 
-    def setOtherData(self):
-        """
-        Sets any other data not directly pertaining to location
-        """
-        self.matchesEncompassingDataStrand = None # Whether or not the strand on the encompassing data matches this data's strand.
-        self.positionRelativeToEncompassingData = None # The position of the encompassed feature within the encompassing feature.
-        self.encompassingFeature: EncompassingData = None # The feature encompassing this feature.
 
-        self.ambiguousStrandMatching = False # Whether or not there is ambiguity due to different strands on multiple encompassing data features.
-        self.ambiguousRelativePos = False # Whether or not there is ambiguity due to different relative positions on multiple encompassing data features.
-        self.ambiguousEncompassingFeature = False # Whether or not there is ambiguity due to multiple encompassing features.
+    def updateStratifierData(self, stratifierClass: Type[OutputDataStratifier], newData):
+        """
+        Given a stratifier class and some data, update the dictionary of stratifier data,
+        creating a new entry if necessary.  Updates both the data and ambiguity.
+        """
 
-        self.finishedTracking = False # Changes to true when there is certainty that this object will not be updated again.
+        oldData, ambiguous = self.stratifierData.setdefault(stratifierClass, (None, False))
+        if (oldData is not None and oldData != newData): ambiguous = True
+        self.stratifierData[stratifierClass] = (newData, ambiguous)
+
+
+    def getStratifierData(self, stratifierClass: Type[OutputDataStratifier]):
+        return self.stratifierData.setdefault(stratifierClass, (None, False))
 
 
 class EncompassedDataWithContext(EncompassedData):
@@ -143,6 +146,8 @@ class EncompassingData:
 
     def getLocationString(self):
         return self.chromosome + ':' + str(self.startPos) + '-' + str(self.endPos) + '(' + self.strand + ')'
+
+    def getLength(self): return self.endPos - self.startPos + 1
 
 class EncompassingDataDefaultStrand(EncompassingData):
     """
