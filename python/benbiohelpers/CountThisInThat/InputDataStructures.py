@@ -1,7 +1,5 @@
 # This script contains two data objects that represent the inputs from two files in the related "ThisInThatCounter".
 # These objects are meant to be inherited from and overridden as necessary.
-from typing import Dict, Tuple, Type
-from benbiohelpers.CountThisInThat.OutputDataStratifiers import OutputDataStratifier
 
 ENCOMPASSED_DATA = 1
 ENCOMPASSING_DATA = 2
@@ -17,7 +15,7 @@ class EncompassedData:
         self.choppedUpLine = line.strip().split()
 
         self.setLocationData(acceptableChromosomes)
-        self.stratifierData: Dict[Type[OutputDataStratifier], Tuple] = dict()
+        self.stratifierData = dict()
 
     def __key(self):
         return (self.chromosome, self.position, self.strand)
@@ -51,7 +49,7 @@ class EncompassedData:
         return self.chromosome + ':' + str(self.position) + '(' + self.strand + ')'
 
 
-    def updateStratifierData(self, stratifierClass: Type[OutputDataStratifier], newData):
+    def updateStratifierData(self, stratifierClass, newData):
         """
         Given a stratifier class and some data, update the dictionary of stratifier data,
         creating a new entry if necessary.  Updates both the data and ambiguity.
@@ -62,7 +60,7 @@ class EncompassedData:
         self.stratifierData[stratifierClass] = (newData, ambiguous)
 
 
-    def getStratifierData(self, stratifierClass: Type[OutputDataStratifier]):
+    def getStratifierData(self, stratifierClass):
         return self.stratifierData.setdefault(stratifierClass, (None, False))
 
 
