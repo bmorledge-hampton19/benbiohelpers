@@ -104,7 +104,7 @@ class EncompassingData:
     def __init__(self, line: str, acceptableChromosomes):
 
         # Read in the next line.
-        self.choppedUpLine = line.strip().split()
+        self.choppedUpLine = line.strip().split('\t')
 
         self.setLocationData(acceptableChromosomes)
         self.setOtherData()

@@ -339,7 +339,7 @@ class FeatureFractionODS(OutputDataStratifier):
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
 
         self.fractionNum = fractionNum
-        for fraction in range(self.fractionNum): self.attemptAddKey(fraction)
+        for fraction in range(self.fractionNum): self.attemptAddKey(fraction + 1)
 
     
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
@@ -352,12 +352,12 @@ class FeatureFractionODS(OutputDataStratifier):
         binSize = encompassingFeature.getLength()/self.fractionNum
 
         # Obtain the position of the encompassed feature relative to the encompassing feature. (Taking strand into account)
-        if encompassingFeature.strand == '+': relativePos = encompassedFeature - encompassingFeature.startPos
+        if encompassingFeature.strand == '+': relativePos = encompassedFeature.position - encompassingFeature.startPos
         else: relativePos = encompassingFeature.endPos - encompassedFeature.position
 
         # Determine which bin the encompassed feature belongs in and update it accordingly.
         encompassedBinNum = int(relativePos / binSize) + 1
-        encompassedFeature.updateStratifierData(type(self), encompassedFeature)
+        encompassedFeature.updateStratifierData(type(self), encompassedBinNum)
 
 
 class StrandComparisonODS(OutputDataStratifier):

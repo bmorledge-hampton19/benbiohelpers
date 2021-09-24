@@ -92,6 +92,13 @@ class CounterOutputDataHandler:
                                                          encompassingFeature, centerRelativePos, extraRangeRadius, outputName))
 
 
+    def addFeatureFractionStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = "Feature_Fraction", fractionNum = 6):
+        """
+        Adds a stratification layer for fractional binning.
+        """
+        self.addNewStratifier(FeatureFractionODS(ambiguityHandling, self.getNewStratificationLevelDictionaries(), outputName, fractionNum))
+
+
     def addEncompassingFeatureStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = "Encompassing_Feature"):
         """
         Adds a layer onto the output data structure to stratify by encompassing features.
