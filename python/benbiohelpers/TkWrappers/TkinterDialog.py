@@ -61,7 +61,7 @@ class TkinterDialog(tk.Frame):
             
 
         # Set up a parent canvas for things like the scroll bar.
-        self.parentCanvas = tk.Canvas(parentFrame, borderwidth= 0, width = 0, height = 0)
+        self.parentCanvas = tk.Canvas(parentFrame, borderwidth= 0, width = 0, height = 0, highlightthickness=0)
         self.parentCanvas.grid(row = row, column = column, columnspan = columnSpan, pady = pady, sticky = "news")
         self.parentCanvas.columnconfigure(0, weight = 1)
         self.parentCanvas.rowconfigure(0, weight = 1)
