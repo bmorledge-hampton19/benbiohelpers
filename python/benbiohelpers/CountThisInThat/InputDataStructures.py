@@ -174,3 +174,12 @@ class TfbsData(EncompassingData):
     def setOtherData(self):
         self.sequence = self.choppedUpLine[4]
         self.tfbsName = self.choppedUpLine[6] # Might need to change the column number here...
+
+
+class ColorDomainData(EncompassingDataDefaultStrand):
+    """
+    Includes information on the color domain.
+    """
+
+    def setOtherData(self):
+        self.color = self.choppedUpLine[3]
