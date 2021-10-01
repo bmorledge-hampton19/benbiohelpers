@@ -533,6 +533,25 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         return context
 
 
+class SimpleEncompassingColStrODS(OutputDataStratifier):
+    """
+    An output data stratifier which stratifies by all the different strings found in a given column of the encompassing features file.
+    """
+
+    def __init__(self, ambiguityHandling, outputDataDictionaries, outputName, colIndex):
+        super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
+        self.colIndex = colIndex
+
+    def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
+
+        encompassedFeature.updateStratifierData(type(self), encompassingFeature.choppedUpLine[self.colIndex])
+
+    def getRelevantKey(self, encompassedFeature: EncompassedData):
+        key = super().getRelevantKey(encompassedFeature)
+        if key is not None: self.attemptAddKey(key)
+        return key
+
+
 class PlaceholderODS(OutputDataStratifier):
     """
     An output data stratifier which actually doesn't stratify by anything and just counts all encompassed features.

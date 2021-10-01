@@ -122,6 +122,14 @@ class CounterOutputDataHandler:
         self.addNewStratifier(EncompassedFeatureContextODS(self.getNewStratificationLevelDictionaries(), outputName, contextSize, includeAlteredTo))
 
 
+    def addSimpleEncompassingColStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, 
+                                           outputName = "Some_Column_Or_Something_LOL", colIndex = 3):
+        """
+        Adds a stratification layer for unique strings found at a given column index for the encompassing features file.
+        """
+        self.addNewStratifier(SimpleEncompassingColStrODS(ambiguityHandling, self.getNewStratificationLevelDictionaries(), outputName, colIndex))
+
+
     def addPlaceholderStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = None):
         """
         Adds a layer onto the output data structure to make sure that the last data column just contains raw counts.
