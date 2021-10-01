@@ -331,19 +331,21 @@ class FeatureFractionODS(OutputDataStratifier):
     (e.g. this mutation is in the 2nd sixth of the gene.)
     """
 
-    def __init__(self, ambiguityHandling, outputDataDictionaries, outputName, fractionNum, flankingBinSize):
+    def __init__(self, ambiguityHandling, outputDataDictionaries, outputName, fractionNum, flankingBinSize, flankingBinNum):
         """
-        Initialize the feature fraction ODS using the parent constructor and two additional parameters:
+        Initialize the feature fraction ODS using the parent constructor and three additional parameters:
         1. fractionNum is the number of "bins" to keep track of in each encompassing feature.
         2. flankingBinSize is the number of nucleotides used to make flanking bins (so flankingBinSize*2 nucleotides will be consumed) 
+        3. flankingBinNum is the number of flanking bins on each side of the fraction bins (so a flankingBinNum of 2 would add 4 total bins)
         before splitting up the encompassing feature based on fractionNum.
         """
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName=outputName)
 
         self.fractionNum = fractionNum
         self.flankingBinSize = flankingBinSize
+        self.flankingBinNum = flankingBinNum
         for fraction in range(self.fractionNum): self.attemptAddKey(fraction + 1)
-        if flankingBinSize > 0: self.attemptAddKey(0); self.attemptAddKey(fractionNum+1)
+        for i in range(self.flankingBinNum): self.attemptAddKey(0-i); self.attemptAddKey(self.fractionNum+1+i)
 
     
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
@@ -353,19 +355,23 @@ class FeatureFractionODS(OutputDataStratifier):
         """
 
         # Determine the bin size for the given feature. (Calculated without flanking regions.)
-        binSize = (encompassingFeature.getLength()-2*self.flankingBinSize)/self.fractionNum
+        nonFlankingSize = encompassingFeature.getLength()-2*self.flankingBinSize*self.flankingBinNum
+        binSize = nonFlankingSize/self.fractionNum
+        assert binSize > 0, "Invalid bin size, " + str(nonFlankingSize) + ", for " + encompassingFeature.getLocationString()
 
         # Obtain the position of the encompassed feature relative to the encompassing feature. (Taking strand into account)
         if encompassingFeature.strand == '+': relativePos = encompassedFeature.position - encompassingFeature.startPos
         else: relativePos = encompassingFeature.endPos - encompassedFeature.position
 
+        # Adjust relative position for flanking bins so a relative position of 0 comes just after the flanking bin
+        # and a relative position of "nonFlankingSize" is the start of the first flanking bin on the other side.
+        relativePos -= self.flankingBinSize*self.flankingBinNum
+
         # Determine which bin the encompassed feature belongs in and update it accordingly.
-        # Flanking bin size is subtracted from relative position prior to the calculation so that the result
-        # can be interpreted directly for values not in the flanking regions and can easily be adjusted if they're not
-        # in those bins.
-        encompassedBinNum = int( (relativePos-self.flankingBinSize) / binSize) + 1
-        if encompassedBinNum < 1: encompassedBinNum = 0
-        elif encompassedBinNum > self.fractionNum: encompassedBinNum = self.fractionNum + 1
+        if relativePos < 0: encompassedBinNum = int((relativePos+1)/self.flankingBinSize)
+        elif relativePos >= nonFlankingSize: 
+            encompassedBinNum = int( (relativePos - nonFlankingSize) / self.flankingBinSize ) + self.fractionNum + 1
+        else: encompassedBinNum = int(relativePos/binSize) + 1
         encompassedFeature.updateStratifierData(type(self), encompassedBinNum)
 
 
@@ -527,8 +533,7 @@ class EncompassedFeatureContextODS(OutputDataStratifier):
         if self.includeAlteredTo: context = context + ">" + encompassedFeature.alteredTo
 
         # Add this context to the output data dictionaries if we haven't seen it before.
-        if context not in self.allKeys:
-            self.attemptAddKey(context)
+        self.attemptAddKey(context)
 
         return context
 
