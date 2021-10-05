@@ -205,7 +205,7 @@ class OutputDataStratifier(ABC):
     def formatKeyForOutput(self, key):
         """
         Performs any formatting necessary to prepare the key for output to a file.
-        By default, returns the key cconverted to a string.
+        By default, returns the key converted to a string.
         """
         return str(key)
 
@@ -576,3 +576,7 @@ class PlaceholderODS(OutputDataStratifier):
 
     def getRelevantKey(self, encompassedFeature: EncompassedData):
         return None
+
+
+    def formatKeyForOutput(self, key):
+        return self.outputName
