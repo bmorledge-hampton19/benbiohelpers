@@ -189,13 +189,21 @@ class CounterOutputDataHandler:
             for encompassedFeature in sorted(self.encompassedFeaturesToWrite):
                 self.writer.writeFeature(encompassedFeature)
                 self.outputDataStructure.pop(encompassedFeature)
+                self.outputDataStratifiers[0].removeKey(encompassedFeature)
             self.encompassedFeaturesToWrite.clear()
 
-        if self.encompassingFeaturesToWrite is not None:
+        elif self.encompassingFeaturesToWrite is not None:
             for encompassingFeature in sorted(self.encompassingFeaturesToWrite):
                 self.writer.writeFeature(encompassingFeature)
                 self.outputDataStructure.pop(encompassingFeature)
+                self.outputDataStratifiers[0].removeKey(encompassingFeature)
             self.encompassingFeaturesToWrite.clear()
+
+        else: return # Exit now if not writing any features incrementally.
+
+        # If we didn't return yet, we have at least one list keeping track of features and popping them from the output dictionary.
+        # We need to make sure that memory is properly freed up from the output data stratifiers.
+        self.outputDataStratifiers[0].manageMemory()
 
 
     def updateODSs(self, encompassedFeature, encompassingFeature):
@@ -509,8 +517,9 @@ class OutputDataWriter():
 
     def finishIndividualFeatureWriting(self):
         """
-        Sorts the results of individual feature writing, as features are not guaranteed to be written in the same order
-        as the input files.
+        Close the output file.
+        NOTE: I previously had a note here that said this function was sorting the output, but it wasn't? Also,
+              I'm not sure it's even necessary in the first place...
         """
         self.outputFile.close()
 

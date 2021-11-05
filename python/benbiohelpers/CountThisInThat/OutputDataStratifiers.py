@@ -2,7 +2,7 @@
 # output data structure from the CounterOutputDataHandler can be stratified.
 from abc import ABC, abstractmethod
 from benbiohelpers.CountThisInThat.SupplementalInformation import SUP_INFO_KEY, SupplementalInformationHandler
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Any
 from enum import Enum
 from benbiohelpers.CountThisInThat.InputDataStructures import *
 
@@ -118,7 +118,7 @@ class OutputDataStratifier(ABC):
 
         for dictionary in dictionaries:
 
-            self.outputDataDictionaries.append(dictionary)
+            self.outputDataDictionaries.append(dictionary) # RIGHT HERE!  We append the dictionary, but never get rid of it when it gets popped off of the parent stratifier's dictionary.
                 
             if hasChildStratifier:
                 newChildDictionaries.extend(self.initializeChildDictionaries(dictionary, self.allKeys))
@@ -158,6 +158,50 @@ class OutputDataStratifier(ABC):
         What should be done if the key is already present and couldn't be added?
         (Not an abstract function, because I think it'll be pretty common to put nothing here.)
         """
+
+
+    def removeKey(self, key):
+        """
+        Removes the specified key from the set.  Useful for freeing up memory during incremental writing.
+        """
+        self.allKeys.remove(key)
+
+
+    def manageMemory(self):
+        """
+        Perform 3 tasks to free up memory:  
+        First, refresh the set of all keys to free up memory from orphaned hashes in the set.
+        Second, do something similar for the root output data dictionary. (Assumes self is the root ODS)
+        Third, recreate the list of output data dictionaries for all children of the root.  
+        This last step occurs by recursive calls to the cleanUpOutputDataDicts funciton.
+        NOTE: This function should really only be called on the root ODS.
+        """
+        self.allKeys = self.allKeys.copy()
+
+        assert len(self.outputDataDictionaries) == 1, "manageMemory called on ODS that is not the root."
+
+        # Before clearing the dictionary, record any important information that is still there, so it can be restored afterwards.
+        dictionaryPresever = list(self.outputDataDictionaries[0].items())
+        self.outputDataDictionaries[0].clear()
+        for key, value in dictionaryPresever: self.outputDataDictionaries[0][key] = value
+
+        # Clean up any output data dictionaries in the children.
+        self.childDataStratifier.cleanUpOutputDataDicts(self.outputDataDictionaries)
+
+
+    def cleanUpOutputDataDicts(self, parentDictionaries: List[Dict[Any,Dict]]):
+        """
+        Recreates the list of output data dictionaries based on the values present in the given dictionaries.
+        Recursively calls itself to do the same in children.  Ultimately, this will free up memory from
+        branches that were previously pruned but are still referenced in the output data dictionaries.
+        """
+        self.outputDataDictionaries = list()
+        for parentDictionary in parentDictionaries:
+            for thisLevelDictionary in parentDictionary.values():
+                self.outputDataDictionaries.append(thisLevelDictionary)
+
+        if self.childDataStratifier is not None:
+            self.childDataStratifier.cleanUpOutputDataDicts(self.outputDataDictionaries)
 
 
     @abstractmethod
@@ -390,7 +434,7 @@ class StrandComparisonODS(OutputDataStratifier):
             dictionary[True] = 0 # For strand matching
             dictionary[False] = 0 # For strand mismatching
         self.allKeys.update((True, False))
-        
+
 
     def updateConfirmedEncompassedFeature(self, encompassedFeature: EncompassedData, encompassingFeature: EncompassingData):
         """
