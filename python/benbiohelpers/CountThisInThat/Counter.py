@@ -94,7 +94,7 @@ class ThisInThatCounter(ABC):
         if self.currentEncompassedFeature is not None and not self.isCurrentEncompassedFeatureActuallyEncompassed:
 
             # If we are writing encompassed positions individually, do we have a large number of features waiting to be written?
-            # If so, this means we are trackign non-encompassed features and we have a large stretch between encompassing features.
+            # If so, this means we are tracking non-encompassed features and we have a large stretch between encompassing features.
             # So, to prevent the non-encompassed features from filling up memory, write them!
             if self.writeIncrementally == ENCOMPASSED_DATA and len(self.outputDataHandler.encompassedFeaturesToWrite) > 10000 and (
                 self.lastNonEncompassedFeature < self.currentEncompassedFeature
@@ -164,14 +164,35 @@ class ThisInThatCounter(ABC):
         return EncompassingData(line, self.acceptableChromosomes)
 
 
-    @abstractmethod
     def setUpOutputDataHandler(self):
         """
-        An abstract method for setting up the output data structure(s).  
-        Should probably be implemented to run one or more of the template functions in CounterOutputData or a child of it,
-        but by default this sets up a very simple output data structure which just counts instances of encompassment.
+        An abstract method for setting up the output data structure(s).
+        Calls the three functions below to achieve this.
+        By default this sets up a very simple output data structure which just counts instances of encompassment.
+        """
+        self.initOutputDataHandler()
+        self.setupOutputDataStratifiers()
+        self.setupOutputDataWriter()
+
+
+    def initOutputDataHandler(self):
+        """
+        Use this function to create the instance of the CounterOutputDataHandler object.
         """
         self.outputDataHandler = CounterOutputDataHandler(self.writeIncrementally)
+
+
+    def setupOutputDataStratifiers(self):
+        """
+        Use this function to set up any output data stratifiers for the output data handler.
+        """
+        pass
+
+
+    def setupOutputDataWriter(self):
+        """
+        Use this funciton to set up the output data writer.
+        """
         self.outputDataHandler.createOutputDataWriter(self.outputFilePath)
 
 
@@ -286,7 +307,7 @@ class ThisInThatCounter(ABC):
 
         # Read through any remaining encompassed features in case we are recording non-encompassed features.
         while self.currentEncompassedFeature is not None: self.readNextEncompassedFeature()
-        self.outputDataHandler.writeWaitingFeatures() # Can catch any waiting encompassed features.
+        if self.writeIncrementally != 0: self.outputDataHandler.writeWaitingFeatures() # Can catch any waiting encompassed features.
 
         # Close files open for reading.
         self.encompassedFeaturesFile.close()
