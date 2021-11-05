@@ -2,7 +2,7 @@
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData, ENCOMPASSING_DATA, ENCOMPASSED_DATA
 from benbiohelpers.CountThisInThat.OutputDataStratifiers import *
 from typing import List, Type, Union
-import subprocess, warnings
+import warnings
 
 
 class CounterOutputDataHandler:
@@ -13,7 +13,8 @@ class CounterOutputDataHandler:
     *Places sticky note on back: "Inherit from me"*
     """
 
-    def __init__(self, incrementalWriting, trackAllEncompassing = False, trackAllEncompassed = False, countAllEncompassed = False):
+    def __init__(self, incrementalWriting, trackAllEncompassing = False, trackAllEncompassed = False, 
+                 countAllEncompassed = False, countNonCountedEncompassedAsNegative = False):
         """
         Initialize the object by setting default values
         The incrementalWriting parameter flags either encompassed or encompassing features (or None) to be written incrementally.
@@ -26,7 +27,10 @@ class CounterOutputDataHandler:
         self.trackAllEncompassing = trackAllEncompassing
         self.trackAllEncompassed = trackAllEncompassed
         self.countAllEncompassed = countAllEncompassed
+        self.countNonCountedEncompassedAsNegative = countNonCountedEncompassedAsNegative
         assert not self.countAllEncompassed or self.trackAllEncompassed, "All encompassed features cannot be counted if they aren't tracked."
+        assert not self.countNonCountedEncompassedAsNegative or self.trackAllEncompassed, ("Can't count non-counted encompassed as negative "
+                                                                                           "if they aren't tracked.")
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
         self.nontolerantAmbiguityHandling = False # To start, there is no non-tolerant ambiguity handling.
@@ -220,6 +224,7 @@ class CounterOutputDataHandler:
                 outputDataStratifier.onNonCountedEncompassedFeature(encompassedFeature)
             if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
             if self.countAllEncompassed: self.countFeature(encompassedFeature, encompassingFeature)
+            if self.countNonCountedEncompassedAsNegative: self.countFeature(encompassedFeature, encompassingFeature, -1)
 
 
     def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
@@ -233,7 +238,7 @@ class CounterOutputDataHandler:
             if self.encompassingFeaturesToWrite is not None: self.encompassingFeaturesToWrite.add(encompassingFeature)
 
 
-    def countFeature(self, encompassedFeature, encompassingFeature):
+    def countFeature(self, encompassedFeature, encompassingFeature, countValue = 1):
         """
         If count is true, increments the proper object in the output data structure.
         Otherwise, just updates supplemental information.
@@ -241,7 +246,7 @@ class CounterOutputDataHandler:
 
         # Account for the base case where we are just counting all features.
         if len(self.outputDataStratifiers) == 0: 
-            self.outputDataStructure += 1
+            self.outputDataStructure += countValue
             return
 
         # Drill down through the ODS's using the relevant keys from this encompassed feature to determine where to count.
@@ -252,7 +257,7 @@ class CounterOutputDataHandler:
                 if supplementalInfoHandler.updateOnCount:
                     currentODSDict[SUP_INFO_KEY][i] = supplementalInfoHandler.updateSupplementalInfo(currentODSDict[SUP_INFO_KEY][i], 
                                                                                                      encompassedFeature, encompassingFeature)
-        currentODSDict[self.outputDataStratifiers[-1].getRelevantKey(encompassedFeature)] += 1
+        currentODSDict[self.outputDataStratifiers[-1].getRelevantKey(encompassedFeature)] += countValue
 
 
     def checkFeatureStatus(self, encompassedFeature, exitingEncompassment):
