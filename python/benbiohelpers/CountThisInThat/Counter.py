@@ -178,6 +178,7 @@ class ThisInThatCounter(ABC):
     def initOutputDataHandler(self):
         """
         Use this function to create the instance of the CounterOutputDataHandler object.
+        Default behavior creates the output data handler and passes in the counter's "writeIncrementally" value.
         """
         self.outputDataHandler = CounterOutputDataHandler(self.writeIncrementally)
 
@@ -185,6 +186,7 @@ class ThisInThatCounter(ABC):
     def setupOutputDataStratifiers(self):
         """
         Use this function to set up any output data stratifiers for the output data handler.
+        Default behavior sets up no stratifiers.
         """
         pass
 
@@ -192,6 +194,7 @@ class ThisInThatCounter(ABC):
     def setupOutputDataWriter(self):
         """
         Use this funciton to set up the output data writer.
+        Default behavior creates the output data writer with the counter's "outputFilePath" value
         """
         self.outputDataHandler.createOutputDataWriter(self.outputFilePath)
 
