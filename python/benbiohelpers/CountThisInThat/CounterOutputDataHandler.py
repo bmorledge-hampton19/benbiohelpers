@@ -158,7 +158,7 @@ class CounterOutputDataHandler:
 
 
     def createOutputDataWriter(self, outputFilePath: str, oDSSubs: List = None, 
-                               customStratifyingNames = None, getCountDerivatives = None):
+                               customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False):
         """
         Pretty self explanatory.  See the __init__ method for OutputDataWriter for more info.
 
@@ -173,7 +173,7 @@ class CounterOutputDataHandler:
 
         self.writer = OutputDataWriter(self.outputDataStructure, self.outputDataStratifiers, outputFilePath,
                                        oDSSubs = oDSSubs, customStratifyingNames = customStratifyingNames,
-                                       getCountDerivatives = getCountDerivatives)
+                                       getCountDerivatives = getCountDerivatives, omitZeroRows = omitZeroRows)
 
         if self.encompassedFeaturesToWrite is not None or self.encompassingFeaturesToWrite is not None:
             assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
@@ -342,7 +342,7 @@ class CounterOutputDataHandler:
 class OutputDataWriter():
 
     def __init__(self, outputDataStructure, outputDataStratifiers, outputFilePath: str,
-                    oDSSubs: List = None, customStratifyingNames = None, getCountDerivatives = None):
+                    oDSSubs: List = None, customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False):
         """
         Set up the OutputDataWriter by providing access to the output data stratifiers and the underlying dictionaries as well as by
         giving an output file path and the two optional arguments described below.
@@ -363,6 +363,8 @@ class OutputDataWriter():
         All return types should be lists of strings so they can be directly written to the output file using join.
         Also, MAKE SURE that the returned list, whether getHeaders is true or false, is always the SAME LENGTH.
         If not assigned, the default function simply returns an empty list.
+
+        The omitZeroRows flag, if set to true, ensures that only rows with at least one count are written.
         """
 
         self.outputDataStructure = outputDataStructure
@@ -373,6 +375,7 @@ class OutputDataWriter():
         self.oDSSubs = oDSSubs
         self.customStratifyingNames = customStratifyingNames
         self.currentDataRow = None
+        self.omitZeroRows = omitZeroRows
         self.previousKeys = [None]*(len(self.outputDataStratifiers) - 1)
 
         # Do some input checking...
@@ -481,8 +484,17 @@ class OutputDataWriter():
         # Otherwise, add the entries in this dictionary (which should be integers representing counts) to the data row 
         # along with any count derivatives and write the row.
         else:
+            # Initialize the omission flag to true if necessary.
+            if self.omitZeroRows: omitRow = True
+            else: omitRow = False
+
             for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
-                self.setDataCol(stratificationLevel + supplementalInfoCount + i, str(currentDataObject[key]))
+                counts = currentDataObject[key]
+                if counts != 0: omitRow = False
+                self.setDataCol(stratificationLevel + supplementalInfoCount + i, str(counts))
+
+            if omitRow: return
+            
             self.currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(False)
             if isinstance(self.currentDataRow[0],list):
                 self.outputFile.write('\t'.join(['\t'.join(self.currentDataRow[0])] + self.currentDataRow[1:]) + '\n')
