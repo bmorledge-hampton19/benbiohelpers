@@ -144,6 +144,7 @@ class OutputDataStratifier(ABC):
         newChildDictionaries = list()
         hasChildStratifier = self.childDataStratifier is not None
         self.allKeys.add(key)
+        self.sortedKeys = None
 
         for dictionary in self.outputDataDictionaries:
 
