@@ -32,7 +32,7 @@ class DynamicSelector(tk.Frame):
     def getControllerVar(self): return self.controllerVar.get()
 
 
-    def initDropdownController(self, labelText, options):
+    def initDropdownController(self, labelText, options, row = 0, column = 0):
         "Initialize a dropdown as the controller for what dynamic content is displayed."
 
         # Make sure we haven't already initialized another controller
@@ -48,7 +48,7 @@ class DynamicSelector(tk.Frame):
 
         # Create a tk.Frame to encompass the dropdown.
         dropdownFrame = tk.Frame(self)
-        dropdownFrame.grid(row = 0, column = 0, sticky = tk.W)
+        dropdownFrame.grid(row = row, column = column, sticky = tk.W)
 
         # Add the label
         tk.Label(dropdownFrame, text = labelText).grid(row = 0, column = 0)
@@ -61,7 +61,7 @@ class DynamicSelector(tk.Frame):
         defaultDisplayKey = options[0]
 
 
-    def initCheckboxController(self, labelText, default = 0):
+    def initCheckboxController(self, labelText, default = 0, row = 0, column = 0):
         "Initialize a checkbox as the controller for what dynamic content is displayed."
 
         # Make sure we haven't already initialized another controller
@@ -72,7 +72,7 @@ class DynamicSelector(tk.Frame):
         self.controllerVar = tk.IntVar()
 
         checkbox = tk.Checkbutton(self, text = labelText, variable = self.controllerVar, command = self.checkController)
-        checkbox.grid(row = 0, column = 0, pady = 3, sticky = tk.W)
+        checkbox.grid(row = row, column = column, pady = 3, sticky = tk.W)
 
         if default != 0: checkbox.select()
 
