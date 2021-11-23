@@ -393,7 +393,9 @@ class OutputDataWriter():
             self.getCountDerivativesFunc = lambda outputDataWriter, getHeaders: list()
         else: self.getCountDerivativesFunc = getCountDerivatives
 
-        # Obtain headers (checks oDSSubs for valid input as well)
+        # Obtain headers once here for individual feature writing (checks oDSSubs for valid input as well)
+        # NOTE: If the final data stratifier establishes keys dynamically, (i.e. new keys are discovered during the counting process)
+        #       these headers may be incorrect later on.
         self.headers = self.getHeaders()
 
 
@@ -547,10 +549,10 @@ class OutputDataWriter():
         else:
 
             # Write headers.
-            self.outputFile.write('\t'.join(self.headers) + '\n')
+            self.outputFile.write('\t'.join(self.getHeaders()) + '\n')
 
             # Next, write the rest of the data using the recursive writeDataRows function
-            self.currentDataRow = [None]*(len(self.headers))
+            self.currentDataRow = [None]*(len(self.getHeaders()))
 
             self.writeDataRows(self.outputDataStructure, 0, 0)
 
