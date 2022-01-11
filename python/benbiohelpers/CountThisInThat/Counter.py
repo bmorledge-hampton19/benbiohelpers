@@ -6,6 +6,7 @@ import warnings, subprocess
 from typing import List
 from benbiohelpers.CountThisInThat.InputDataStructures import EncompassedData, EncompassingData, ENCOMPASSED_DATA, ENCOMPASSING_DATA
 from benbiohelpers.CountThisInThat.CounterOutputDataHandler import CounterOutputDataHandler
+from benbiohelpers.CustomErrors import UnsortedInputError
 
 
 class ThisInThatCounter(ABC):
@@ -73,16 +74,18 @@ class ThisInThatCounter(ABC):
             try:
                 subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassedFeaturesFilePath))
             except subprocess.CalledProcessError:
-                print("Encompassed features file is not properly sorted.")
-                quit()
+                raise UnsortedInputError(encompassedFeaturesFilePath,
+                                         "Expected sorting based on chromosome name, alphabetically, "
+                                         "followed by start and end position.")
             
         if checkForSortedFiles[1]:
             print("Checking encompassing features file for proper sorting...")
             try:
                 subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassingFeaturesFilePath))
             except subprocess.CalledProcessError:
-                print("Encompassing features file is not properly sorted.")
-                quit()
+                raise UnsortedInputError(encompassingFeaturesFilePath,
+                                         "Expected sorting based on chromosome name, alphabetically, "
+                                         "followed by start and end position.")
 
 
     def readNextEncompassedFeature(self):

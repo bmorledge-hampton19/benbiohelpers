@@ -3,10 +3,11 @@
 import tkinter as tk
 import tkinter.font as tkFont
 import os
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from typing import List, Dict
 from benbiohelpers.TkWrappers.MultipleFileSelector import MultipleFileSelector
 from benbiohelpers.TkWrappers.DynamicSelector import DynamicSelector
+from benbiohelpers.CustomErrors import NonexistantPathError, checkIfPathExists
 
 
 class TkinterDialog(tk.Frame):
@@ -39,6 +40,9 @@ class TkinterDialog(tk.Frame):
             parentFrame.rowconfigure(row, weight=1)
             parentFrame.grid(sticky="news")
             self.root = self
+            
+            self.rootWindow.report_callback_exception = self.report_callback_exception
+
 
             # Fix the window size if the root is scrollable.
             if self.scrollable: self.rootWindow.geometry("1000x"+str(self.scrollableWindowMaxHeight))
@@ -97,7 +101,8 @@ class TkinterDialog(tk.Frame):
            self.parentCanvas.bind("<Leave>", self.onLeaveScrollableCanvas)
 
         # Prepare lists for the selections object.
-        self.individualFileEntries = list() # A list of entry objects from individual file selections
+        self.individualFileEntries = list() # A list of two-item tuples containing first the file entry objects from individual 
+                                            # file selections and also a boolean value telling whether or not they are for new files.
         self.plainTextEntries = list() # A list of entry objects from createTextField
         self.toggles = list() # A list of toggle objects created by the script
         self.dropdownVars = list() # A list of stringVars associated with dropdowns
@@ -106,6 +111,11 @@ class TkinterDialog(tk.Frame):
         self.dynamicSelectors: List[DynamicSelector] = list() # A list of DynamicSelector objects, which contain TkinterDialog objects of their own.
         self.subDialogs: List[TkinterDialog] = list() # A list of TkinterDialog objects designated "sub-dialogs"
         self.selections: Selections = None # A selections object to be populated at the end of the dialog
+
+
+    def report_callback_exception(self, exc, val, tb):
+        messagebox.showerror("Error", message = str(val))
+
 
     ### A series of functions to bind to gui events.
     def onSelfConfigure(self, event: tk.Event):
@@ -222,7 +232,7 @@ class TkinterDialog(tk.Frame):
         #Create the "browse" button.
         tk.Button(fileSelectorFrame, text = "Browse", command = lambda: self.browseForFile(textField,title,newFile,directory,*fileTypes)).grid(row = 0, column = 3)
 
-        self.individualFileEntries.append(textField)
+        self.individualFileEntries.append((textField,newFile))
 
 
     def createMultipleFileSelector(self, title: str, row: int, fileEnding, *fileTypes, additionalFileEndings = list(), columnSpan = 2):
@@ -425,7 +435,11 @@ class TkinterDialog(tk.Frame):
         # Get all the different Selections-relevant variables from this dialog object
         if self.ID is not None:
             for individualFileEntry in self.individualFileEntries:
-                individualFilePaths.append(individualFileEntry.get())
+                individualFilePaths.append(individualFileEntry[0].get())
+                # Also check to make sure the file path exists if it's not a new file path.
+                if not individualFileEntry[1] and not os.path.exists(individualFilePaths[-1]):
+                    #self.root.rootWindow.destroy()
+                    raise NonexistantPathError(individualFilePaths[-1])
 
             for multipleFileSelector in self.multipleFileSelectors:
                 filePathGroups.append(multipleFileSelector.getFilePaths())
