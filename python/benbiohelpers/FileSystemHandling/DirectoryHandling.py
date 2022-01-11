@@ -1,17 +1,13 @@
 import os
 
 # Returns just the name of the first directory above a given path. (e.g. test/file/path.txt would return "file")
-def getIsolatedParentDir(filePath: str, isDir = False):
+def getIsolatedParentDir(filePath: str):
 
     filePath = os.path.abspath(filePath)
 
-    if not os.path.isdir(filePath) == isDir:
-        if isDir: raise ValueError("Expected directory path, but received the file path: " + filePath)
-        else: raise ValueError("Expected file path, but received the directory path: " + filePath)
-
     assert os.path.sep in filePath, "Given path \"" + filePath + "\" has no parent directory.  Are you sure you passed a file path?"
 
-    if isDir: return filePath.rsplit(os.path.sep,1)[-1]
+    if os.path.isdir(filePath): return filePath.rsplit(os.path.sep,1)[-1]
     else: return filePath.rsplit(os.path.sep,2)[-2]
 
 
