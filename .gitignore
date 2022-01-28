@@ -120,3 +120,12 @@ dmypy.json
 
 # Ignore test files
 /test.*
+
+# Files from building debian source package
+/*.dsc
+/*.deb
+/*.build
+/*.buildinfo
+/*.changes
+/*source.ppa.upload
+/*.tar.gz
