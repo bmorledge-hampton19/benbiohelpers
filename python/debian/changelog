@@ -1,3 +1,9 @@
+python3-benbiohelpers (1.1-0ubuntu2) focal; urgency=low
+
+  * Update setup.py
+
+ -- LAPTOP-73BJEL7H <bmorledge-hampton@LAPTOP-73BJEL7H.localdomain>  Fri, 28 Jan 2022 13:05:52 -0800
+
 python3-benbiohelpers (1.1-0ubuntu1) focal; urgency=low
 
   * Introduced custom user error classes
