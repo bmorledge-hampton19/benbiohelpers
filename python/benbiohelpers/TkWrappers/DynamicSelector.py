@@ -20,6 +20,13 @@ class DynamicSelector(tk.Frame):
         self.currentDisplayKey = None # The current active display.  Helps prevent unnecessary dispaly switching.
         self.defaultDisplayKey = None # Determines which display starts as active.
 
+
+    # Functions for "with" compatibility.
+    def __enter__(self): return self
+    
+    def __exit__(self, type, value, tb): self.initDisplayState()
+
+
     def getCurrentDisplay(self): 
         
         # Check to see if we actually have a display for the given key, and initialize an empty display if necessary.
