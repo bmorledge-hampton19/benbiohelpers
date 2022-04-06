@@ -323,7 +323,7 @@ class TkinterDialog(tk.Frame):
         # Create the label and text box in the text field object.
         tk.Label(textField, text = labelText).grid(row = 0, column = 0, sticky = tk.W)
         textBox = tk.Entry(textField, width = 20)
-        textBox.grid(row = 1, columnspan = 2, pady = 2, padx = 5)
+        textBox.grid(row = 1, columnspan = 2, pady = 2, padx = 5, sticky = tk.W)
         textBox.insert(0, defaultText)
 
         self.plainTextEntries.append(textBox)
@@ -499,22 +499,22 @@ class Selections:
 
 
     # DEPRECATED: diverts to getIndividualFilePaths
-    def getFilePaths(self, ID = "Root") -> list:
+    def getFilePaths(self, ID = "Root") -> List[str]:
         return self.getIndividualFilePaths(ID)
 
-    def getIndividualFilePaths(self, ID = "Root") -> list:
+    def getIndividualFilePaths(self, ID = "Root") -> List[str]:
         return self.selectionSets[ID][0]
 
-    def getFilePathGroups(self, ID = "Root") -> list:
+    def getFilePathGroups(self, ID = "Root") -> List[List[str]]:
         return self.selectionSets[ID][1]
 
-    def getTextEntries(self, ID = "Root") -> list:
+    def getTextEntries(self, ID = "Root") -> List[str]:
         return self.selectionSets[ID][2]
 
-    def getToggleStates(self, ID = "Root") -> list:
+    def getToggleStates(self, ID = "Root") -> List[bool]:
         return self.selectionSets[ID][3]
 
-    def getDropdownSelections(self, ID = "Root") -> list:
+    def getDropdownSelections(self, ID = "Root") -> List[str]:
         return self.selectionSets[ID][4]
 
 
