@@ -113,6 +113,12 @@ class TkinterDialog(tk.Frame):
         self.selections: Selections = None # A selections object to be populated at the end of the dialog
 
 
+    # Functions for "with" compatibility.
+    def __enter__(self): return self
+    
+    def __exit__(self, type, value, tb): self.mainloop()
+
+
     def report_callback_exception(self, exc, val, tb):
         messagebox.showerror("Error", message = str(val))
 
