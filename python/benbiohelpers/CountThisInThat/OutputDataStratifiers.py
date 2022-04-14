@@ -277,6 +277,9 @@ class RelativePosODS(OutputDataStratifier):
         Uses the size of the given encompassing feature to set up the given layer of the output data structure using the range of values encompassed.
         If centerRelativePos is true, the "0" position in the dictionary is the middle of the range, rounded up.
         extraRangeRadius adds 2*[value] positions to the given range. 
+        NOTE: I'm pretty sure that the way this initialization works, it expects that ALL encompassing features will have the same
+        size. This may need to be updated in the future with a parameter that allows for dynamic expansion of relative position values via the
+        attemptAddKey function.
         """
         super().__init__(ambiguityHandling, outputDataDictionaries, outputName)
 
