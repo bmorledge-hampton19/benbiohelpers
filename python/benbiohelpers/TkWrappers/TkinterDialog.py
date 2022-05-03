@@ -116,7 +116,9 @@ class TkinterDialog(tk.Frame):
     # Functions for "with" compatibility.
     def __enter__(self): return self
     
-    def __exit__(self, type, value, tb): self.mainloop()
+    def __exit__(self, type, value, tb): 
+        self.mainloop()
+        if self.selections is None: quit()
 
 
     def report_callback_exception(self, exc, val, tb):
