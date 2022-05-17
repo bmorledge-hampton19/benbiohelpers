@@ -22,7 +22,8 @@ def parseToIterable(input: str, rangeChar = '-', sepChar = ',', castValuesToInt 
         return(range(int(start),int(stop)+1))
 
     # Otherwise, the input is a single item that just needs to be turned into an iterable and returned.
+    # (Unless of course it's empty, in which case an empty list should be returned.)
     else:
-        if castValuesToInt:
-            return([int(input)])
+        if not input: return([])
+        elif castValuesToInt: return([int(input)])
         else: return([input])
