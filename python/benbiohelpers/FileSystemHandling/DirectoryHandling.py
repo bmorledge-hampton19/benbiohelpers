@@ -18,8 +18,9 @@ def checkDirs(*directoryPaths):
 
 
 # By default, recursively searches the given directory for files with the specified ending. Returns a list of the resulting file paths.
+# In addition, if the path contains list is not empty, at least one of the items in the list must be a substring of the path basename.
 # If searchRecursively is set to false, only searches the given directory and returns the first match (or None if none are found).
-def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchRecursively = True):
+def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchRecursively = True, basenameContains = list()):
     """Recursively searches the given directory(ies) for files of the specified type."""
 
     if searchRecursively: filePaths = list()
@@ -34,15 +35,14 @@ def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchR
 
         # Check files for the valid ending(s)
         else:
-            if path.endswith(validEnding): 
+
+            # Perform the "contains check" if necessary.
+            if len(basenameContains) == 0: containsCheck = True
+            else: containsCheck = any(substring in item for substring in basenameContains)
+
+            if containsCheck and any(path.endswith(ending) for ending in (validEnding,) + additionalValidEndings): 
                 if not searchRecursively: return path
                 else: filePaths.append(path)
-            else:
-                for additionalValidEnding in additionalValidEndings:
-                    if path.endswith(additionalValidEnding): 
-                        if not searchRecursively: return path
-                        else: filePaths.append(path)
-                        break
 
     if not searchRecursively: return None
     else: return filePaths

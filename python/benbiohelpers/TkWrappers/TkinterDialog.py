@@ -243,12 +243,13 @@ class TkinterDialog(tk.Frame):
         self.individualFileEntries.append((textField,newFile))
 
 
-    def createMultipleFileSelector(self, title: str, row: int, fileEnding, *fileTypes, additionalFileEndings = list(), columnSpan = 2):
+    def createMultipleFileSelector(self, title: str, row: int, fileEnding, *fileTypes, columnSpan = 2,
+                                   additionalFileEndings = list(), basenameContains = list()):
         "Create a file selector which can dynamically add and remove multiple file paths to a given group."
 
         # Create an instance of the the MultipleFileSelector class, and place it in the dialog at the given row.
         multipleFileSelector = MultipleFileSelector(self, title, self.workingDirectory, 
-                                                    fileEnding, additionalFileEndings, *fileTypes)
+                                                    fileEnding, additionalFileEndings, *fileTypes, basenameContains = basenameContains)
         multipleFileSelector.grid(row = row, columnspan = columnSpan, sticky = tk.W, pady = 10)
 
         # Keep track of the file selector so we can access the file paths it contains later.

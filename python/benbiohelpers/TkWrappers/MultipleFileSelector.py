@@ -9,7 +9,7 @@ from benbiohelpers.FileSystemHandling.DirectoryHandling import getFilesInDirecto
 class MultipleFileSelector(tk.Frame):
     "A Widget for a Tkinter dialog that allows for the selection of multiple files."
 
-    def __init__(self, master, title, workingDirectory, fileEnding, additionalFileEndings, *fileTypes):
+    def __init__(self, master, title, workingDirectory, fileEnding, additionalFileEndings, *fileTypes, basenameContains = list()):
 
         # Base class initialization
         super().__init__(master)
@@ -22,6 +22,7 @@ class MultipleFileSelector(tk.Frame):
         self.fileEnding = fileEnding # The expected ending for the files the dialog is requesting.  
                                      # (Used when sifting through directories for relevant files)
         self.additionalFileEndings = additionalFileEndings
+        self.basenameContains = basenameContains
         self.directories = list()
         self.maxPathWidth = 0
 
@@ -141,7 +142,7 @@ class MultipleFileSelector(tk.Frame):
 
         for path in self.getPaths():
             if os.path.isdir(path):
-                filePaths += getFilesInDirectory(path,self.fileEnding,*self.additionalFileEndings)
+                filePaths += getFilesInDirectory(path,self.fileEnding,*self.additionalFileEndings, basenameContains = self.basenameContains)
             else:
                 filePaths.append(path)
         
