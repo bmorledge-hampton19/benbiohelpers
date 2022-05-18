@@ -10,7 +10,8 @@ from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.CustomErrors import UserInputError
 
 
-def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansionNum, writeColumn = None, outputFilePathSuffix = "_expanded"):
+def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansionNum, writeColumn = None, 
+                          outputFilePathSuffix = "_expanded", customOutputDirectory = None):
     """
     This function does all the legwork! 
     expansionNum represents the number of bases to expand by on each side.
@@ -31,7 +32,9 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
         intermediateExpansionFilePath = os.path.join(intermediateFilesDir, inputBedFileBasename + "_intermediate_expansion.bed")
         intermediateFastaFilePath = intermediateExpansionFilePath.rsplit('.',1)[0] + ".fa"
 
-        expandedOutputFilePath = os.path.join(workingDirectory, inputBedFileBasename + outputFilePathSuffix + ".bed")
+        if customOutputDirectory is None: outputDirectory = workingDirectory
+        else: outputDirectory = customOutputDirectory
+        expandedOutputFilePath = os.path.join(outputDirectory, inputBedFileBasename + outputFilePathSuffix + ".bed")
         expandedFilePaths.append(expandedOutputFilePath)
 
         # Create the intermediate bed file with expanded positions.
@@ -106,6 +109,10 @@ def main():
             writeColDynSel.initDropdownController("Write Column:", options = ["Append", "Replace"])
             writeColDynSel.initDisplay("Replace", "replaceCol").createTextField("Column index to replace:", 0, 0, defaultText=4)
         dialog.createTextField("Output file path suffix:", 4, 0, defaultText = "_3bp_expanded")
+        with dialog.createDynamicSelector(5, 0) as outputDirDynSel:
+            outputDirDynSel.initCheckboxController("Specify single output dir")
+            outputDirDialog = outputDirDynSel.initDisplay(True, "outputDir")
+            outputDirDialog.createFileSelector("Output Directory:", 0, directory = True)
 
     selections = dialog.selections
 
@@ -118,8 +125,10 @@ def main():
         try: writeColumn = int(selections.getTextEntries("replaceCol")[0])
         except ValueError: raise UserInputError(f"Column index: {selections.getTextEntries()[0]} cannot be coerced to an integer")
     outputFilePathSuffix = selections.getTextEntries()[1]
+    if outputDirDynSel.getControllerVar(): customOutputDir = selections.getIndividualFilePaths("outputDir")[0]
+    else: customOutputDir = None
 
-    expandSequenceContext(inputBedFilePaths, genomeFilePath, expansionNum, writeColumn, outputFilePathSuffix)
+    expandSequenceContext(inputBedFilePaths, genomeFilePath, expansionNum, writeColumn, outputFilePathSuffix, customOutputDir)
 
 
 if __name__ == "__main__": main()
