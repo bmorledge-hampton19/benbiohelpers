@@ -51,7 +51,7 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
                     strand = choppedUpLine[5]
 
                     # Write the results to the intermediate expansion file as long as it is not at the start of the chromosome.
-                    if float(choppedUpLine[1]) > -1: 
+                    if int(startPos) > -1: 
                         intermediateExpansionFile.write("\t".join((chromosome, startPos, endPos, '.', '.', strand))+"\n")
                     else: print(f"Entry at chromosome {chromosome} with expanded start pos {startPos} "
                                 "extends into invalid positions.  Skipping.")
