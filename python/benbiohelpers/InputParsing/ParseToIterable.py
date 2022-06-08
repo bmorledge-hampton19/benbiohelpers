@@ -16,7 +16,7 @@ def parseToIterable(input: str, rangeChar = '-', sepChar = ',', castValuesToInt 
 
     # If there is a range separator in the input (and no separator characters),
     # return a range object as the iterable.
-    elif rangeChar in input:
+    elif rangeChar in input and castValuesToInt:
         start, stop = input.split(rangeChar)
         if int(stop) < int(start): warnings.warn(f"Stop comes before start in range {input}.  Range will contain no values.")
         return(range(int(start),int(stop)+1))
