@@ -1,10 +1,10 @@
 # This script contains a series of classes for managing metadata in projects with a large degree of data stratification.
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from enum import Enum
 from operator import eq
-import os
 from typing import Any, Dict, Iterator, Type, Union
+from benbiohelpers.CustomErrors import MetadataPathError
+import os, warnings
 
 class MetadataFeatureID(Enum):
     """
@@ -48,20 +48,46 @@ class Metadata(ABC):
         """
 
 
-    def __init__(self, metadataFilePath = None, directory = None):
+    def __init__(self, initializationFilePath: str = None, directory: str = None, verboseDirectoryCreation = True):
         """
-        The optional metadataFilePath option can be used to specify a metadata file to initialize this instance.
-        Otherwise, values for all parameters are set to None.
+        The optional initializationFilePath option can be used to intialize this instance using either a metadata file (ending
+        in .metadata) or a data file with metadata at ".metadata/[data file base name].metadata" relative to the data file's
+        parent directory. For initialization by file path, this instance's directory is set to the parent directory of the
+        retrieved metadata file.
+
+        If no initializationFilePath is given, values for all Metadata parameters are set to None and
+        a directory may be specified manually.
         """
 
         self.features: Dict[MetadataFeatureID, Any] = dict()
         self.initializeFeatures()
 
-        if metadataFilePath is not None:
-            self.directory = os.path.dirname(metadataFilePath)
+        if initializationFilePath is not None:
+            if initializationFilePath.endswith(".metadata"):
+                if not os.path.exists(initializationFilePath):
+                    raise MetadataPathError(initializationFilePath, "Metadata file not found at expected location:")
+            else:
+                initializationFilePath = os.path.join(os.path.dirname(initializationFilePath),".metadata",
+                                                      os.path.basename(initializationFilePath) + ".metadata")
+                if not os.path.exists(initializationFilePath):
+                    raise MetadataPathError(initializationFilePath,
+                                            "Given initialization file does not end with \".metadata\", and a companion "
+                                            "file is not found at:")
+            self.directory = os.path.dirname(initializationFilePath)
             assert directory is None or directory == self.directory, "Directory given that doesn't match metadata file path."
-            self.readFeaturesFromFile(metadataFilePath)
-        elif directory is not None: self.directory = directory
+            self.readFeaturesFromFile(initializationFilePath)
+        elif directory is not None:
+            if not directory.endswith(".metadata"):
+                warnings.warn(f"Given metadata directory, {directory} does not end with \".metadata\" and may be incompatible "
+                               "with further metadata initializations.")
+            if not os.path.exists(directory):
+                if not os.path.exists(os.path.dirname(directory)):
+                    raise MetadataPathError(directory, "Neither the given metadata directory nor its parent directory exist:")
+                else:
+                    if verboseDirectoryCreation:
+                        print(f"Creating metadata directory at {directory}")
+                    os.mkdir(directory)
+            self.directory = directory
         else: self.directory = None
 
 
@@ -98,10 +124,13 @@ class Metadata(ABC):
                 self[metadataFeatureID] = value
 
 
-    def getFilePath(self, fileExtension = None):
+    def getFilePath(self, useParentDirectory = True):
         """
         This function derives a file path from the metadata features.
         (Not required to be implemented by subclasses, but will raise an error if not implemented and called)
+        The useParentDirectory parameter will typically determine whether the returned file path is directly under
+        the Metadata object's directory (usually "\.metadata") or under its parent directory (usually also the parent
+        directory for the metadata's companion data file.)
         """
         raise NotImplementedError
 
@@ -122,7 +151,7 @@ class Metadata(ABC):
         """
 
         # If no metadata file path is given, try to derive one from the metadata itself.
-        if metadataFilePath is None: metadataFilePath = self.getFilePath(fileExtension=".metadata")
+        if metadataFilePath is None: metadataFilePath = self.getFilePath(False)+".metadata"
 
         # Loop through the metadata feature ID's, writing their respective features (if present)
         with open(metadataFilePath, 'w') as metadataFile:
