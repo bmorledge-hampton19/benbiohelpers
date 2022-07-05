@@ -1,7 +1,7 @@
 {
     "python.testing.pytestArgs": [
         "python",
-        "-c", "python/benbiohelpers/DataPipelineManagement/pytest.ini"
+        "-c", "python/benbiohelpers/DataPipelineManagement/testing/pytest.ini"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

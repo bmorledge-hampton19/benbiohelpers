@@ -1,16 +1,16 @@
 from benbiohelpers.DataPipelineManagement.Metadata import *
 from operator import is_
 from enum import auto
-import pytest
+import pytest, shutil
 
 class FruitType(MetadataFeatureValue):
-    APPLE = auto()
-    BUNCH_OF_GRAPES = auto()
-    ORANGE = auto()
+    APPLE = "apple"
+    BUNCH_OF_GRAPES = "bunch_of_grapes"
+    ORANGE = "orange"
 
 class TestMetadataFeatureID(MetadataFeatureID):
     FRUIT = auto(), FruitType
-    AMOUNT = auto(), float
+    COST = auto(), float
     NAME = auto(), str
     COMPANY = auto(), str
 TMFID = TestMetadataFeatureID
@@ -18,20 +18,20 @@ TMFID = TestMetadataFeatureID
 class TestMetadata(Metadata):
     FeatureIDEnum = TestMetadataFeatureID
 
-    def getFilePath(self, fileExtension=None):
+    def getFilePath(self, useParentDirectory = True):
 
         filePathPieces = list()
 
         for testMetadataFeatureID in TestMetadataFeatureID:
             if self[testMetadataFeatureID] is not None:
                 if testMetadataFeatureID is TMFID.FRUIT:
-                    filePathPieces.append(self[TMFID.FRUIT].name)
+                    filePathPieces.append(self[TMFID.FRUIT].value)
                 else: filePathPieces.append(str(self[testMetadataFeatureID]))
 
-        if fileExtension is None: filePathPieces.append(".txt")
-        else: filePathPieces.append(fileExtension)
+        if useParentDirectory: directory = os.path.dirname(self.directory)
+        else: directory = self.directory
 
-        return os.path.join(self.directory,'_'.join(filePathPieces))
+        return os.path.join(directory,'_'.join(filePathPieces) + ".tsv")
         
 
 testDirectory = os.path.dirname(__file__)
@@ -70,12 +70,17 @@ def test_assignment():
 
 
 def test_automated_metadata_read_write():
-    testMetadata = TestMetadata(directory = testDirectory)
+    shutil.rmtree(os.path.join(testDirectory,".metadata"))
+    testMetadata = TestMetadata(directory = os.path.join(testDirectory,".metadata"))
     testMetadata[TMFID.FRUIT] = FruitType.BUNCH_OF_GRAPES
-    testMetadata[TMFID.AMOUNT] = 2.99
+    testMetadata[TMFID.COST] = 2.99
     testMetadata[TMFID.COMPANY] = "Grapes_R_Us"
     testMetadata.writeFeaturesToFile()
-    newTestMetadata = TestMetadata(testMetadata.getFilePath(".metadata"))
+
+    newTestMetadata = TestMetadata(testMetadata.getFilePath(False)+".metadata")
+    assert newTestMetadata[TMFID.FRUIT] is FruitType.BUNCH_OF_GRAPES
+
+    newTestMetadata = TestMetadata(os.path.join(testDirectory, "bunch_of_grapes_2.99_Grapes_R_Us.tsv"))
     assert newTestMetadata[TMFID.FRUIT] is FruitType.BUNCH_OF_GRAPES
 
 
@@ -109,11 +114,11 @@ def test_metadata_list_subset():
     assert len(testMetadatas.subset(TMFID.FRUIT, FruitType.APPLE, is_)) == 2
 
     testMetadatas = MetadataList(TestMetadata() for _ in range(3))
-    testMetadatas[0][TMFID.AMOUNT] = 1.99
-    testMetadatas[1][TMFID.AMOUNT] = 1.99
-    testMetadatas[2][TMFID.AMOUNT] = 2.99
+    testMetadatas[0][TMFID.COST] = 1.99
+    testMetadatas[1][TMFID.COST] = 1.99
+    testMetadatas[2][TMFID.COST] = 2.99
 
-    assert len(testMetadatas.subset(TMFID.AMOUNT, 2.99)) == 1
+    assert len(testMetadatas.subset(TMFID.COST, 2.99)) == 1
 
 
 def test_metadata_list_copy_with_changes():
