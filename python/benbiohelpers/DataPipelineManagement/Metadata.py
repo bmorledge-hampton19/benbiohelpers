@@ -39,6 +39,13 @@ class Metadata(ABC):
     Those features can be passed to functions to standaradize/define parameters for data handling, figure generation, etc.
     """
 
+    defaultValues = dict() 
+    """
+    Keys: Should be instances of self.FeatureIDEnum
+    Values: Default value for the associated metadata feature
+    Note: Metadta features not in the dictionary will default to NoneType.
+    """
+
     @property
     @abstractmethod
     def FeatureIDEnum(self) -> Type[MetadataFeatureID]:
@@ -102,9 +109,11 @@ class Metadata(ABC):
         """
         Iterates through the class's feature IDs to initialize the dictionary of features (using NoneTypes).
         """
-        for featureID in self.FeatureIDEnum: self[featureID] = None
+        for featureID in self.FeatureIDEnum: 
+            if featureID in self.defaultValues: self[featureID] = self.defaultValues[featureID]
+            else: self[featureID] = None
 
-    
+
     def readFeaturesFromFile(self, metadataFilePath):
         """
         Given a file path, this function initializes this object using the data therein.
@@ -134,7 +143,7 @@ class Metadata(ABC):
         """
         raise NotImplementedError
 
-    
+
     def getFeaturesFromString(self, featuresString):
         """
         This function derives metadata features from a given string (usually a file path using strict naming conventions).
@@ -168,7 +177,7 @@ class Metadata(ABC):
 
                 metadataFile.write(f"{metadataFeatureID.name}:\t{value}\n")
 
-    
+
     def copy(self):
         "Returns a deep copy of the metadata object."
         newMetadata = self.__class__(directory = self.directory)
