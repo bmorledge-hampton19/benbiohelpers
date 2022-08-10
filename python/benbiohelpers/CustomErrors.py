@@ -50,10 +50,22 @@ class InvalidPathError(UserInputError):
         return errorAsString
 
 
-class MetadataPathError(InvalidPathError):
+class MetadataError(Exception):
+    """
+    A parent error class for metadata-associated errors.
+    """
+
+
+class MetadataPathError(InvalidPathError, MetadataError):
     """
     An error class for when metadata isn't found at the expected path, probably because the user moved things around or 
     deleted things they shouldn't.  (Or because my code is buggy, which is always a possibility...)
+    """
+
+
+class MetadataAutoGenerationError(UserInputError, MetadataError):
+    """
+    An error class for when metadata cannot be unambiguously generated from a given string (usually a filename).
     """
 
 
