@@ -6,6 +6,7 @@ def parseFastaDescription(fastaSequenceName: str):
     """
     Returns a list of sequence identifiers from a fasta name resulting from the bedtools "getfasta" command.  
     The returned list contains chromosome, start pos, end pos, and strand, if present, in that order)
+    E.g. Chr1:51-52(-) will become a list like this: ["Chr1", "51", "52", "-"]
     """
 
     # Remove the leading '>' if necessary.
@@ -56,6 +57,17 @@ class FastaFileIterator:
             self.strand = sequenceLocation[3]
 
             self.sequence = sequence # The DNA sequence itself
+
+        def formatForWriting(self):
+            """
+            Reverses the fasta entry creation process to produce a string that can be rewritten to a file.
+            """
+            fastaStringForWriting = f">{self.sequenceName}\n"
+            i = 0
+            while i < len(self.sequence):
+                fastaStringForWriting += self.sequence[i:i+50] + '\n'
+                i += 50
+            return fastaStringForWriting
 
 
     # Initialize the FastaFileIterator with an open fasta file object.
