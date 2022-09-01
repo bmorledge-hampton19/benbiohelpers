@@ -157,8 +157,18 @@ class CounterOutputDataHandler:
             self.outputDataStratifiers[stratificationLevel].addSuplementalInfo(supplementalInfoClass(outputName, updateUntilExit, updateOnCount))
 
 
+    def addCustomSupplementalInformationHandler(self, supplementalInfo: SupplementalInformationHandler):
+        """
+        Adds the specified supplemental information handler just prior to the most recent stratification level.
+        Keep in mind that SIH's cannot be added to the bottom level stratifier, as they store information in the specified
+        level's child stratifier.
+        """
+        self.outputDataStratifiers[-2].addSuplementalInfo(supplementalInfo)
+
+
     def createOutputDataWriter(self, outputFilePath: str, oDSSubs: List = None, 
-                               customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False):
+                               customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False,
+                               omitFinalStratificationCounts = False):
         """
         Pretty self explanatory.  See the __init__ method for OutputDataWriter for more info.
 
@@ -173,7 +183,8 @@ class CounterOutputDataHandler:
 
         self.writer = OutputDataWriter(self.outputDataStructure, self.outputDataStratifiers, outputFilePath,
                                        oDSSubs = oDSSubs, customStratifyingNames = customStratifyingNames,
-                                       getCountDerivatives = getCountDerivatives, omitZeroRows = omitZeroRows)
+                                       getCountDerivatives = getCountDerivatives, omitZeroRows = omitZeroRows,
+                                       omitFinalStratificationCounts = omitFinalStratificationCounts)
 
         if self.encompassedFeaturesToWrite is not None or self.encompassingFeaturesToWrite is not None:
             assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
@@ -342,7 +353,8 @@ class CounterOutputDataHandler:
 class OutputDataWriter():
 
     def __init__(self, outputDataStructure, outputDataStratifiers, outputFilePath: str,
-                    oDSSubs: List = None, customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False):
+                    oDSSubs: List = None, customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False,
+                    omitFinalStratificationCounts = False):
         """
         Set up the OutputDataWriter by providing access to the output data stratifiers and the underlying dictionaries as well as by
         giving an output file path and the two optional arguments described below.
@@ -365,6 +377,10 @@ class OutputDataWriter():
         If not assigned, the default function simply returns an empty list.
 
         The omitZeroRows flag, if set to true, ensures that only rows with at least one count are written.
+
+        The omitFinalStratificationCounts, if true, ignores any counts in the final layer of stratification. (This is
+        most useful when you just want to record encompassment, and don't actually care how often it occurs.) Note that
+        count derivatives are still calculated and displayed.
         """
 
         self.outputDataStructure = outputDataStructure
@@ -376,6 +392,7 @@ class OutputDataWriter():
         self.customStratifyingNames = customStratifyingNames
         self.currentDataRow = None
         self.omitZeroRows = omitZeroRows
+        self.omitFinalStratificationCounts = omitFinalStratificationCounts
         self.previousKeys = [None]*(len(self.outputDataStratifiers) - 1)
 
         # Do some input checking...
@@ -424,7 +441,7 @@ class OutputDataWriter():
                 headers.append(outputDataStratifier.outputName)
                 for supplementalInfoHandler in outputDataStratifier.supplementalInfoHandlers:
                     headers.append(supplementalInfoHandler.outputName)
-        if len(self.outputDataStratifiers) > 0:
+        if len(self.outputDataStratifiers) > 0 and not self.omitFinalStratificationCounts:
             for key in self.outputDataStratifiers[-1].getKeysForOutput():
                 headers.append(self.getOutputName(-1, key))
 
@@ -493,11 +510,14 @@ class OutputDataWriter():
             for i, key in enumerate(self.outputDataStratifiers[stratificationLevel].getKeysForOutput()):
                 counts = currentDataObject[key]
                 if counts != 0: omitRow = False
-                self.setDataCol(stratificationLevel + supplementalInfoCount + i, str(counts))
+                if not self.omitFinalStratificationCounts:
+                    self.setDataCol(stratificationLevel + supplementalInfoCount + i, str(counts))
+            if self.omitFinalStratificationCounts: i = 0
 
             if omitRow: return
-            
+
             self.currentDataRow[stratificationLevel + supplementalInfoCount + i + 1:] = self.getCountDerivatives(False)
+
             if isinstance(self.currentDataRow[0],list):
                 self.outputFile.write('\t'.join(['\t'.join(self.currentDataRow[0])] + self.currentDataRow[1:]) + '\n')
             else: self.outputFile.write('\t'.join(self.currentDataRow) + '\n')
@@ -526,6 +546,7 @@ class OutputDataWriter():
             supplementalInfo = supplementalInfoHandler.getFormattedOutput(self.outputDataStructure[featureToWrite][SUP_INFO_KEY][i])
             self.setDataCol(i + 1, supplementalInfo)
 
+        self.previousKeys[0] = featureToWrite
         self.writeDataRows(self.outputDataStructure[featureToWrite], 1, len(supplementalInfoHandlers))
 
 

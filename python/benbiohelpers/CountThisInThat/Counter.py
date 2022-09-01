@@ -21,6 +21,8 @@ class ThisInThatCounter(ABC):
     NOTE:  It is VITAL that both files are sorted, first by chromosome number and then by starting and ending coordinates.
     This is because the code reads through the files in parallel to ensure linear runtime, but as a result, 
     it will crash and burn and give you a heap of garbage as output if the inputs aren't sorted.
+    By default, this sorting is checked (assuming standard bed format), but this can be changed with the checkForSortedFiles
+    parameter. With this parameter, the values in the tuple represent the encompassed and encompassing files respectively.
     """
 
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 

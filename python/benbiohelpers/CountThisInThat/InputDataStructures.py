@@ -12,7 +12,7 @@ class EncompassedData:
     def __init__(self, line: str, acceptableChromosomes):
 
         # Read in the next line.
-        self.choppedUpLine = line.strip().split()
+        self.choppedUpLine = line.strip().split('\t')
 
         self.setLocationData(acceptableChromosomes)
         self.stratifierData = dict()
@@ -98,7 +98,7 @@ class EncompassedDataDefaultStrand(EncompassedData):
 
 class EncompassingData:
     """
-    Stores data on each of the features that are expected to be encompass the first feature
+    Stores data on each of the features that are expected to encompass the first feature
     e.g. this could be for the nucleosomes that are expected to encompass mutations.
     """
     def __init__(self, line: str, acceptableChromosomes):
