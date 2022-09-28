@@ -53,4 +53,4 @@ def getFastqSubset(filePath: str, reads = 10000, outputDir = None):
     Skips the first 100,000 reads, where quality is lower, and writes the
     next 10,000 (by default). Returns the output file path.
     """
-    return getFileSubset(filePath, 100000*4, 100000*4+reads*4, outputDir = outputDir)
+    return getFileSubset(filePath, 10**5*4, 10**5*4+reads*4, outputDir = outputDir)
