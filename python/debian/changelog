@@ -1,3 +1,31 @@
+python3-benbiohelpers (1.2-0ubuntu1) focal; urgency=medium
+
+  * Changes to Tkinter UIs
+    - Added "with as" functionality to basic tkinter dialog and dynamic selectors.
+    - Auto-acquiring files within the multiple file selecter can use "basename contains" logic instead of just "endswith".
+  * Created some new short helper scripts
+    - Created ParseToIterable for parsing raw text, potentially with ranges, to an iterable.
+    - Created CombineReps for automatically merging files that are different repetitions for the same data cohort.
+    - Created GetFileSubset for subsetting files for testing, particularly fastq files, which have to be subsetted
+      in such a way that avoids the low quality reads at the beginning.
+    - Created GetLineCount for quickly getting the number of lines in a file through python.
+    - Created ExpandSequenceContext for generating expanded sequences from a bed file.
+  * Changes to existing short helper scripts
+    - FastaEntry objects from the FastaFileIterator now have an option to create fasta-formatted output from themselves.
+    - Added additional MetadataErrors to the CustomErrors script to accomodate the new Metadata data structure.
+  * Created the Metadata data structure
+    - Will be useful for managing metadata in larger projects.
+    - Contains unit tests for added stability.
+    - Will probably change more as it gets used. This is still very much a prototype.
+  * Updates to ThisInThatCounter
+    - Added new supplemental information handler for getting simple information from a specific column.
+    - Added a new method for creating supplemental information handlers with more modular inputs to accomodate the above.
+    - Added options for masking (omitting) final counts in output.
+  * As always, there are changes that are too small to merit putting here or that I'm simply forgetting.
+    Check Github commit notes for further info.
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Wed, 28 Sep 2022 12:44:03 -0700
+
 python3-benbiohelpers (1.1-0ubuntu2) focal; urgency=low
 
   * Update setup.py

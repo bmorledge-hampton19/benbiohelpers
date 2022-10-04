@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="benbiohelpers",
-    version="1.1",
+    version="1.2",
     description='Helper scripts for use in various bioinformatics projects',
     long_description_content_type="text/markdown",
     url='https://github.com/bmorledge-hampton19/benbiohelpers',
