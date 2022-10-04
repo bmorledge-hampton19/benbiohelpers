@@ -493,6 +493,10 @@ class Selections:
         self.selectionSets: Dict[str, List[List]] = dict()
         self.selectionSets[ID] = list()
 
+        # Sort the file path groups.
+        if filePathGroups is not None:
+            for i in range(len(filePathGroups)): filePathGroups[i] = sorted(filePathGroups[i])
+
         # Populate the selectionSet associated with the given ID.  List indices are given below
         # 0: individual file paths
         # 1: file path groups
