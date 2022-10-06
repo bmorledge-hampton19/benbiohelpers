@@ -23,6 +23,8 @@ def checkDirs(*directoryPaths):
 def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchRecursively = True, basenameContains = list()):
     """Recursively searches the given directory(ies) for files of the specified type."""
 
+    if validEnding is None: return list()
+
     if searchRecursively: filePaths = list()
 
     # Iterate through the given directory
