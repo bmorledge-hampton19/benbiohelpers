@@ -2,7 +2,7 @@
 # This is especially helpful for subsetting fastq files which tend to be lower quality at the
 # beginning. There is also a helper function for subsetting fastq files specifically.
 import os, gzip
-
+from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 
 def getFileSubset(filePath: str, startPos = 0, endPos = 1, fileSuffix = "_test_subset", outputDir = None):
     """
@@ -54,3 +54,16 @@ def getFastqSubset(filePath: str, reads = 10000, outputDir = None):
     next 10,000 (by default). Returns the output file path.
     """
     return getFileSubset(filePath, 10**5*4, 10**5*4+reads*4, outputDir = outputDir)
+
+
+def main():
+    with TkinterDialog() as dialog:
+        dialog.createMultipleFileSelector("Files to subset: ", 0, None)
+        dialog.createTextField("Start Position (0-based)", 1, 0, defaultText = str(0))
+        dialog.createTextField("End Position (1-based)", 2, 0, defaultText = str(10**5*4+10**4*4))
+
+    for filePath in dialog.selections.getFilePathGroups()[0]:
+        getFileSubset(filePath, int(dialog.selections.getTextEntries()[0]), int(dialog.selections.getTextEntries()[1]))
+
+
+if __name__ == "__main__": main()
