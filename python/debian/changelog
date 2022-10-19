@@ -1,3 +1,10 @@
+python3-benbiohelpers (1.2.1-0ubuntu1) focal; urgency=medium
+
+  * Change to Tkinter UIs
+    - Added width parameter to createTextField function
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Wed, 19 Oct 2022 12:48:08 -0700
+
 python3-benbiohelpers (1.2-0ubuntu1) focal; urgency=medium
 
   * Changes to Tkinter UIs
