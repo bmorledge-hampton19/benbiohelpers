@@ -321,7 +321,7 @@ class TkinterDialog(tk.Frame):
         tk.Button(buttonFrame, text = "Quit", command = quit).grid(row = 0, column = 1)
 
 
-    def createTextField(self, labelText, row, column, columnSpan = 2, defaultText = "Type here"):
+    def createTextField(self, labelText, row, column, columnSpan = 2, defaultText = "Type here", width = 20):
         "Creates an editable text field."
 
         # Create an instance of the the text field, and place it in the dialog at the given row.
@@ -331,7 +331,7 @@ class TkinterDialog(tk.Frame):
 
         # Create the label and text box in the text field object.
         tk.Label(textField, text = labelText).grid(row = 0, column = 0, sticky = tk.W)
-        textBox = tk.Entry(textField, width = 20)
+        textBox = tk.Entry(textField, width = width)
         textBox.grid(row = 1, columnspan = 2, pady = 2, padx = 5, sticky = tk.W)
         textBox.insert(0, defaultText)
 
