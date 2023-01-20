@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 # Returns just the name of the first directory above a given path. (e.g. test/file/path.txt would return "file")
 def getIsolatedParentDir(filePath: str):
@@ -48,3 +49,7 @@ def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchR
 
     if not searchRecursively: return None
     else: return filePaths
+
+# Filters out any files directly with in a ".tmp" directory.
+def filterTempFiles(filePaths: List[str]):
+    return [filePath for filePath in filePaths if getIsolatedParentDir(filePath) != ".tmp"]
