@@ -28,7 +28,7 @@ class ThisInThatCounter(ABC):
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 
                  outputFilePath, acceptableChromosomes = None, checkForSortedFiles = (True,True),
                  headersInEncompassedFeatures = False, headersInEncompassingFeatures = False,
-                 encompassingFeatureExtraRadius = 0, writeIncrementally = 0):
+                 encompassingFeatureExtraRadius = 0, writeIncrementally = 0, sortOutputOnExit = False):
 
         self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath, checkForSortedFiles)
 
@@ -41,6 +41,7 @@ class ThisInThatCounter(ABC):
         self.writeIncrementally = writeIncrementally # 0 by default, or one of the two constants: ENCOMPASSED_DATA or ENCOMPASSING_DATA
         self.acceptableChromosomes = acceptableChromosomes
         self.encompassingFeatureExtraRadius = encompassingFeatureExtraRadius
+        self.sortOutputOnExit = sortOutputOnExit
 
         # Skip headers if they are present.
         if headersInEncompassedFeatures: self.encompassedFeaturesFile.readline()
@@ -324,3 +325,13 @@ class ThisInThatCounter(ABC):
         # Write (or finish writing) as necessary.
         if self.writeIncrementally: self.outputDataHandler.writer.finishIndividualFeatureWriting()
         else: self.outputDataHandler.writer.writeResults()
+
+        # If specified, sort the output using the same parameters for checking for sorted input.
+        # (This is useful if encompassed features are larger ranges reduced to midpoints, which
+        # can result in an unsorted output.)
+        # NOTE: This represents yet another potential problem with this library, since midpoints may not actually be sorted
+        # based on the sorting enforced by the checkForSortedInput function, and I think the logic kinda assumes they are.
+        # So... Yeah. Should probably do something about that.
+        if self.sortOutputOnExit:
+            print("Sorting output...")
+            subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-o", self.outputFilePath, self.outputFilePath))
