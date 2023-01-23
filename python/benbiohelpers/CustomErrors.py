@@ -85,3 +85,68 @@ def checkIfPathExists(path):
 
     if os.path.exists(path): return True
     else: raise NonexistantPathError(path)
+
+
+class NonNumericInput(UserInputError):
+    """
+    Called when input that should be numeric cannot be properly cast as such.
+    """
+
+    def __init__(self, shouldBeNumeric: str):
+        self.shouldBeNumeric = shouldBeNumeric
+
+    def __str__(self):
+        return f"The input \"{self.shouldBeNumeric}\" cannot be cast as a numeric value."
+
+
+class NonIntInput(UserInputError):
+    """
+    Called when input that should be an integer cannot be properly cast as such.
+    """
+
+    def __init__(self, shouldBeNumeric: str):
+        self.shouldBeNumeric = shouldBeNumeric
+
+    def __str__(self):
+        return f"The input \"{self.shouldBeNumeric}\" cannot be cast as an integer."
+
+
+class InvalidNumericInput(UserInputError):
+    """
+    Called when numeric input falls within a given range, list, etc.
+    (It's basically a glorified ValueError.)
+    """
+
+    def __init__(self, invalidNumber: str, validityText):
+        self.invalidNumber = invalidNumber
+        self.validityText = validityText
+
+    def __str__(self):
+        return f"The input \"{self.invalidNumber}\" is not valid. {self.validityText}"
+
+
+def checkForNumber(inputToCheck, enforceInt = False, validityCondition = None, validityText = ""):
+    """
+    First, checks if the inputToCheck parameter can be cast to a float. If enforceInt is true, make sure
+    the value can also be cast as an int. If validityCondition is not None, it should be a function
+    which takes a single numeric value and returns true or false.
+    If the input passes all checks, return it.
+    """
+
+    raiseNonIntInput = False
+    raiseNonNumericInput = False
+
+    if enforceInt:
+        try: numericInput = int(inputToCheck)
+        except ValueError: raiseNonIntInput = True
+    else:
+        try: numericInput = float(inputToCheck)
+        except ValueError: raiseNonNumericInput = True
+
+    if raiseNonIntInput: raise NonIntInput(inputToCheck)
+    if raiseNonNumericInput: raise NonNumericInput(inputToCheck)
+
+    if validityCondition is not None and not validityCondition(numericInput):
+        raise InvalidNumericInput(numericInput, validityText)
+
+    return numericInput
