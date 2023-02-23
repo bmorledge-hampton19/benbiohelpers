@@ -1,3 +1,14 @@
+python3-benbiohelpers (1.2.2-0ubuntu1) focal; urgency=low
+
+  * Directory handling
+    - Added a function for filtering files from a list that are within a temporary directory
+  * This-In-That Counter
+    - Added option to sort output after running main counter
+  * Custom Errors
+    - Added errors/checks for parsing numerical input from strings.
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 23 Feb 2023 14:38:44 -0800
+
 python3-benbiohelpers (1.2.1-0ubuntu2) focal; urgency=low
 
   * Reuploading to launchpad with new key
