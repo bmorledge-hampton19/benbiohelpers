@@ -1,3 +1,9 @@
+python3-benbiohelpers (1.2.2-0ubuntu2) jammy; urgency=low
+
+  * Initial release for jammy
+
+ -- Ben Morledge-Hampton <b.morledge-hampton@wsu.edu>  Wed, 1 Mar 2023 11:16:44 -0800
+
 python3-benbiohelpers (1.2.2-0ubuntu1) focal; urgency=low
 
   * Directory handling
