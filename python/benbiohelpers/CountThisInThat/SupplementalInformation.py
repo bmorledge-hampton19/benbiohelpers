@@ -1,7 +1,7 @@
 # This script houses the SupplementalInformation class and subclasses.
 # These classes are used to add additional information to the output data stratifiers.
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Union
 from benbiohelpers.CountThisInThat.InputDataStructures import *
 from benbiohelpers.DNA_SequenceHandling import reverseCompliment
 
@@ -13,11 +13,9 @@ class SupplementalInformationHandler(ABC):
     """
 
     def __init__(self, outputName, updateUntilExit, updateOnCount):
-        """
-        There are two update flags. I THINK that updateUntilExit means that the update function is called on every case of
-        encompassment, whereas updateOnCount means that the update function is called only when the feature is actually
-        counted, which can change based on ambiguity handling. (This probably needs to change at some point.)
-        """
+        # NOTE: There are two update flags. I THINK that updateUntilExit means that the update function is called on every
+        # case of encompassment, whereas updateOnCount means that the update function is called only when the feature is
+        # actually counted, which can change based on ambiguity handling.
         self.outputName = outputName
         self.updateUntilExit = updateUntilExit
         self.updateOnCount = updateOnCount
@@ -128,27 +126,34 @@ class MutationTypeSupInfoHandler(SupplementalInformationHandler):
 class SimpleColumnSupInfoHandler(SupplementalInformationHandler):
     """
     Returns the string at a given column index, either for encompassed or encompassing data (defined by relevantData in __init__).
-    By default, duplicates are removed, and if more than one unique string is found, they are joined with semicolons.
+    By default, duplicates are removed, and if more than one string is found, they are joined with semicolons.
     """
 
     def __init__(self, outputName = "Col_Data", updateUntilExit = True, updateOnCount = False,
-                 relevantData = ENCOMPASSED_DATA, dataCol = 0, emptyDictSub = "NONE"):
+                 relevantData = ENCOMPASSED_DATA, dataCol = 0, emptyInfoSub = "NONE", removeDups = True,
+                 separator = ';'):
         super().__init__(outputName, updateUntilExit, updateOnCount)
         self.relevantData = relevantData
         self.dataCol = dataCol
-        self.emptyDictSub = "NONE"
+        self.emptyInfoSub = emptyInfoSub
+        self.removeDups = removeDups
+        self.separator = separator
 
     def initializeSupplementalInfo(self):
-        return dict()
+        if self.removeDups: return dict()
+        else: return list()
 
-    def updateSupplementalInfo(self, currentInfo: Dict, encompassedData: EncompassedData, encompassingData: EncompassingData):
+    def updateSupplementalInfo(self, currentInfo: Union[Dict,List], encompassedData: EncompassedData, encompassingData: EncompassingData):
         if self.relevantData == ENCOMPASSED_DATA: relevantData = encompassedData
         elif self.relevantData == ENCOMPASSING_DATA: relevantData = encompassingData
         else: raise ValueError("Invalid relevant data value. Should be ENCOMPASSED_DATA or ENCOMPASSING_DATA.")
         colData = relevantData.choppedUpLine[self.dataCol]
-        currentInfo[colData] = None
+        if self.removeDups: currentInfo[colData] = None
+        else: currentInfo.append(colData)
         return currentInfo
 
-    def getFormattedOutput(self, info: Dict) -> str:
-        if len(info) == 0: return self.emptyDictSub
-        else: return ';'.join(info.keys())
+    def getFormattedOutput(self, info: Union[Dict,List]) -> str:
+        if len(info) == 0: return self.emptyInfoSub
+        else:
+            if self.removeDups: return self.separator.join(info.keys())
+            else: return self.separator.join(info)
