@@ -40,6 +40,9 @@ class FastaFileIterator:
     """
     Parses fasta files one entry at a time.
     Designed to work with output from the bedtools getfasta function.
+
+    Usage:
+        `for fastaEntry in FastaFileIterator(openFastaFile):`
     """
 
 
