@@ -8,7 +8,7 @@ def parseToIterable(input: str, sepChar = ',', rangeChar = '-', stepChar = '$', 
     - sepChar: Separates individual items (or ranges of items) in the iterable (e.g. "1, 2, 3")
     - rangeChar: Specifies a range of values ("1-3" is essentially equivalent to "1, 2, 3").
                  If rangeChar is none, ranges are ignored entirely. (Can be useful if strings contain range char.)
-    - stepChar: Specifies a the value to increment by in ranges. Default is 0. Can be a float!
+    - stepChar: Specifies the value to increment by in ranges. Default is 0. Can be a float!
     - castType: The type to cast single-item output to. No casting is performed if castType is NoneType or str.
 
     NOTE: Leading and trailing whitespace and whitespace adjacent to the above characters is removed from final output
