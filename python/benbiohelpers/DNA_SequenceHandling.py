@@ -12,5 +12,9 @@ def reverseCompliment(DNA):
     reverseCompliment = ''.join(reverseComplimentList)
     return reverseCompliment
 
+# Why are these two words so similar... :(
+# Is there an easy way to refactor this?
+def reverseComplement(DNA): return reverseCompliment(DNA)
+
 #Determines whether or not a given base is a purine.
 def isPurine(nucleotide: str): return (nucleotide.upper() == "G" or nucleotide.upper() == "A")
