@@ -13,9 +13,11 @@ def getIsolatedParentDir(filePath: str):
 
 
 # Checks to see if the given directories exist and creates them if they do not.
+# Raises an error if an existing file is passed instead
 def checkDirs(*directoryPaths):
     for directoryPath in directoryPaths:
         if not os.path.exists(directoryPath): os.makedirs(directoryPath)
+        elif os.path.isfile(directoryPath): raise NotADirectoryError(f"Existing file passed to checkDirs: {directoryPath}")
 
 
 # By default, recursively searches the given directory for files with the specified ending. Returns a list of the resulting file paths.
