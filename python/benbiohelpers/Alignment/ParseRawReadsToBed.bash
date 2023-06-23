@@ -6,6 +6,7 @@
 trimmomaticPath=$(dpkg -L trimmomatic | grep .jar$ | head -1)
 
 inputReads2=""
+retainSamOutput=false
 
 while [[ $# > 0 ]]; do
   case $1 in
@@ -39,9 +40,18 @@ while [[ $# > 0 ]]; do
       shift
       shift
       ;;
+    -p|--pipeline-endpoint)
+      pipelineEndpoint="$2"
+      shift
+      shift
+      ;;
     -b|--bowtie2-binary)
       bowtie2Binary="$2"
       shift
+      shift
+      ;;
+    -s|--retain-sam-output)
+      retainSamOutput=true
       shift
       ;;
     -*|--*)
@@ -95,10 +105,15 @@ fi
 
 # Create the names of all other intermediate and output files.
 trimmedFastq="$tmpDirectory/${dataName}_trimmed.fastq.gz"
-bowtieSAMOutput="$tmpDirectory/$dataName.sam"
+if [ "$retainSamOutput" = true ]
+then
+    bowtieSAMOutput="$dataDirectory/$dataName.sam"
+else
+    bowtieSAMOutput="$tmpDirectory/$dataName.sam"
+fi
 bowtieStatsOutput="$tmpDirectory/${dataName}_bowtie2_stats.txt"
 BAMOutput="$tmpDirectory/$dataName.bam.gz"
-finalBedOutput="$dataDirectory/$dataName.bed"
+bedOutput="$dataDirectory/$dataName.bed"
 
 if [[ ! -z "$inputReads2" ]]
 then
@@ -153,14 +168,43 @@ else
     fi
 fi
 
-# Convert from sam to bam.
-echo "Converting from sam to bam..."
-samtools view -b --threads $((threads-1)) -o $BAMOutput $bowtieSAMOutput
+# If the sam file is the endpoint, exit here.
+if [[ $pipelineEndpoint == ".sam" ]]
+then
+    exit 0
+fi
+
+# If we're not ending at a sam file, create the bam file.
+if [[ $pipelineEndpoint != ".sam" && $pipelineEndpoint != ".sam.gz" ]]
+then
+    echo "Converting from sam to bam..."
+    samtools view -b --threads $((threads-1)) -o $BAMOutput $bowtieSAMOutput
+fi
 
 # Gzip the sam file.  (Can't find a way to have bowtie do this to the output by default...)
 echo "Gzipping sam file..."
 pigz -f -p $threads $bowtieSAMOutput
 
-# Convert to final bed output.
+# If the gzipped sam file is the endpoint, exit here.
+if [[ $pipelineEndpoint == ".sam.gz" ]]
+then
+    exit 0
+fi
+
+# Convert to bed output.
 echo "Converting to bed..."
-bedtools bamtobed -i $BAMOutput > $finalBedOutput
+bedtools bamtobed -i $BAMOutput > $bedOutput
+
+# If the bed file is the endpoint, exit here.
+if [[ $pipelineEndpoint == ".bed" ]]
+then
+    exit 0
+fi
+
+# If the gzipped bed file is the endpoint, gzip it, and then end here.
+if [[ $pipelineEndpoint == ".bed.gz" ]]
+then
+    echo "Gzipping bed file..."
+    pigz -f -p $threads $bedOutput
+    exit 0
+fi

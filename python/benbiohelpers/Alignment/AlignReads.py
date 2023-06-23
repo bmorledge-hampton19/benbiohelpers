@@ -1,8 +1,7 @@
 import os, subprocess, time, re
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs, getIsolatedParentDir
-from benbiohelpers.CustomErrors import InvalidPathError
-from xrlesionfinder.ProjectManagement.UsefulFileSystemFunctions import getDataDirectory
+from benbiohelpers.CustomErrors import InvalidPathError, UserInputError
 from benbiohelpers.Alignment.FindAdapters import findAdapters as findAdaptersFunc
 from typing import List
 
@@ -13,7 +12,8 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, adaptorSeqeuncesFil
 
     if pairedEndAlignment: basename = os.path.basename(rawReadsFilePath).rsplit("_R1.fastq", 1)[0]
     else: basename = os.path.basename(rawReadsFilePath).rsplit(".fastq", 1)[0]
-    metadataFilePath = os.path.join(os.path.dirname(rawReadsFilePath),f"{basename}_alignment.metadata")
+    checkDirs(os.path.join(os.path.dirname(rawReadsFilePath),".metadata"))
+    metadataFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".metadata",f"{basename}_alignment.metadata")
     with open(metadataFilePath, 'w') as metadataFile:
 
         if bowtie2Version is None:
@@ -39,7 +39,12 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, adaptorSeqeuncesFil
 # For each of the given reads files, run the accompyaning bash script to perform the alignment.
 def alignReads(rawReadsFilePaths: List[str], adapterSequencesFilePath, bowtie2IndexBasenamePath, alignmentBashScriptFilePath, 
                     readCountsOutputFilePath = None, bowtie2BinaryPath = None, threads = 1, customBowtie2Arguments = '',
-                    findAdapters = False, pairedEndAlignment = False):
+                    findAdapters = False, pairedEndAlignment = False, pipelineEndpoint = ".bed", retainSamOutput = False):
+
+    # Make sure a valid pipelineEndpoint was given.
+    if pipelineEndpoint not in (".bed", ".bed.gz", ".sam", ".sam.gz"):
+        raise UserInputError(f"Unrecognized pipeline endpoint given: {pipelineEndpoint}\n"
+                             'Expected ".bed", ".bed.gz", ".sam", or ".sam.gz"')
 
     # If performing paired end alignment, find pairs for all the given raw reads files.
     if pairedEndAlignment:
@@ -107,12 +112,13 @@ def alignReads(rawReadsFilePaths: List[str], adapterSequencesFilePath, bowtie2In
         # Run the alignment script.
         if pairedEndAlignment:
             arguments = ["bash", alignmentBashScriptFilePath, "-1", read1FilePaths[i], "-2", read2FilePaths[i],
-                         "-a", thisAdapterSequencesFilePath, "-i", bowtie2IndexBasenamePath,
-                         "-t", str(threads), "-c", customBowtie2Arguments]
+                         "-a", thisAdapterSequencesFilePath, "-i", bowtie2IndexBasenamePath, "-t", str(threads),
+                         "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
         else:
             arguments = ["bash", alignmentBashScriptFilePath, "-1", rawReadsFilePath, "-a", thisAdapterSequencesFilePath, 
-                         "-i", bowtie2IndexBasenamePath, "-t", str(threads), "-c", customBowtie2Arguments]
+                         "-i", bowtie2IndexBasenamePath, "-t", str(threads), "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
         if bowtie2BinaryPath is not None: arguments += ["-b", bowtie2BinaryPath]
+        if retainSamOutput: arguments += ["-s"]
         subprocess.run(arguments, check = True)
 
         # If requested, count the number of reads in the original input file(s).
@@ -165,7 +171,7 @@ def parseArgs(args):
 def main():
 
     # Create a simple dialog for selecting the relevant files.
-    with TkinterDialog(workingDirectory=getDataDirectory()) as dialog:
+    with TkinterDialog() as dialog:
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz",
                                         ("Fastq Files", (".fastq.gz", ".fastq")), ("fastq Files", ".fastq"),
                                         additionalFileEndings=[".fastq"])
@@ -184,8 +190,8 @@ def main():
         dialog.createDropdown("How many Threads should be used?", 4, 0, ['1', '2', '3', '4', '5', '6', '7', '8'])
 
         with dialog.createDynamicSelector(5, 0) as additionalOptions:
-            additionalOptions.initDropdownController("Additional Options:", ("Hide", "Show"))
-            additionalOptionsDialog = additionalOptions.initDisplay("Show")
+            additionalOptions.initDropdownController("Additional Options:", ("Ignore", "Use"))
+            additionalOptionsDialog = additionalOptions.initDisplay("Use", "AddOps")
 
             with additionalOptionsDialog.createDynamicSelector(0, 0) as bowtie2BinaryDS:
                 bowtie2BinaryDS.initCheckboxController("Choose alternative bowtie2 binary")
@@ -205,6 +211,11 @@ def main():
                 customArgsDS.initDisplay("Direct Input", selectionsID = "customArgs").createTextField(
                     "Custom Arguments:", 0, 0, defaultText = ''
                 )
+
+            with additionalOptionsDialog.createDynamicSelector(3,0) as pipelineEndpointDS:
+                pipelineEndpointDS.initDropdownController("Pipeline endpoint", (".bed",".bed.gz",".sam",".sam.gz"))
+                pipelineEndpointDS.initDisplay(".bed", ".bed").createCheckbox("Retain sam file in main directory", 0, 0)
+                pipelineEndpointDS.initDisplay(".bed.gz", ".bed.gz").createCheckbox("Retain sam file in main directory", 0, 0)
 
     # Get the raw reads files, but make sure that no trimmed reads files have tagged along!
     unfilteredRawReadsFilePaths = dialog.selections.getFilePathGroups()[0]
@@ -248,8 +259,19 @@ def main():
     elif customArgsDS.getControllerVar() == "Direct Input":
         customBowtie2Arguments = dialog.selections.getTextEntries("customArgs")[0]
 
+
+    if additionalOptions.getControllerVar() == "Use":
+        pipelineEndpoint = pipelineEndpointDS.getControllerVar()
+        if pipelineEndpoint == ".bed": retainSamOutput = dialog.selections.getToggleStates(".bed")[0]
+        elif pipelineEndpoint == ".bed.gz": retainSamOutput = dialog.selections.getToggleStates(".bed.gz")[0]
+        else: retainSamOutput = True
+    else:
+        pipelineEndpoint = ".bed"
+        retainSamOutput = False
+
     alignReads(filteredRawReadsFilePaths, adaptorSequencesFilePath, bowtie2IndexBasenamePath, alignmentBashScriptFilePath, 
-                    readCountsOutputFilePath, bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment)
+                    readCountsOutputFilePath, bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment,
+                    pipelineEndpoint, retainSamOutput)
 
 
 if __name__ == "__main__": main()

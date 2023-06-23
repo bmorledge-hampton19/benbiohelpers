@@ -5,6 +5,7 @@ from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 
 
 # For each of the given reads files, run the accompyaning bash script to perform the alignment.
+# (Mostly obselete in light of the stopAtSam parameter in AlignReads.py)
 def trimmedFastqToSam(fastqFilePaths: List[str], bowtie2IndexBasenamePath, bowtie2BinaryPath, 
                       threads, customBowtie2Arguments):
 
