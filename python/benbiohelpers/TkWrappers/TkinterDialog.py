@@ -4,10 +4,12 @@ import tkinter as tk
 import tkinter.font as tkFont
 import os
 from tkinter import filedialog, messagebox
-from typing import List, Dict
+from typing import List, Dict, Tuple, TextIO
 from benbiohelpers.TkWrappers.MultipleFileSelector import MultipleFileSelector
 from benbiohelpers.TkWrappers.DynamicSelector import DynamicSelector
-from benbiohelpers.CustomErrors import NonexistantPathError, checkIfPathExists
+from benbiohelpers.CustomErrors import NonexistantPathError
+from benbiohelpers.TkWrappers.MyTkErrors import *
+from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
 
 
 class TkinterDialog(tk.Frame):
@@ -20,6 +22,7 @@ class TkinterDialog(tk.Frame):
                  scrollable = False, scrollableWindowMaxHeight = 500):
         
         # Store important variables.
+        self.title = title
         self.scrollable = scrollable
         self.workingDirectory = workingDirectory
         self.ID = ID
@@ -80,10 +83,11 @@ class TkinterDialog(tk.Frame):
         if self.isRoot:
             exitButtonsFrame = tk.Frame(parentFrame)
             exitButtonsFrame.grid(row = 1, columnspan = 2, pady = 5, sticky = tk.W+tk.E)
-            exitButtonsFrame.grid_columnconfigure((0,1), weight = 1)
+            exitButtonsFrame.grid_columnconfigure((0,1,2), weight = 1)
 
-            tk.Button(exitButtonsFrame, text = "Go", command = self.generateSelections).grid(row = 0, column = 0)
-            tk.Button(exitButtonsFrame, text = "Quit", command = quit).grid(row = 0, column = 1)
+            tk.Button(exitButtonsFrame, text = "Go", command = self.go).grid(row = 0, column = 1)
+            tk.Button(exitButtonsFrame, text = "Quit", command = quit).grid(row = 0, column = 2)
+            tk.Button(exitButtonsFrame, text = "Restore Selections", command = self.beginRestore).grid(row = 0, column = 0)
 
         # Initialize the internal frame
         super().__init__(self.parentCanvas)
@@ -101,13 +105,12 @@ class TkinterDialog(tk.Frame):
            self.parentCanvas.bind("<Leave>", self.onLeaveScrollableCanvas)
 
         # Prepare lists for the selections object.
-        self.individualFileEntries = list() # A list of two-item tuples containing first the file entry objects from individual 
+        self.individualFileEntries: List[Tuple[tk.Entry,bool]] = list() # A list of two-item tuples containing first the file entry objects from individual 
                                             # file selections and also a boolean value telling whether or not they are for new files.
-        self.plainTextEntries = list() # A list of entry objects from createTextField
-        self.toggles = list() # A list of toggle objects created by the script
-        self.dropdownVars = list() # A list of stringVars associated with dropdowns
-        self.checkboxVars = list() # A list of intVars associated with checkboxes
-        self.multipleFileSelectors = list() # A list of MultipleFileSelectors, which contain a list of filePaths.
+        self.plainTextEntries: List[tk.Entry] = list() # A list of entry objects from createTextField
+        self.dropdownVars: List[tk.StringVar] = list() # A list of stringVars associated with dropdowns
+        self.checkboxVars: List[tk.BooleanVar] = list() # A list of intVars associated with checkboxes
+        self.multipleFileSelectors: List[MultipleFileSelector] = list() # A list of MultipleFileSelectors, which contain a list of filePaths.
         self.dynamicSelectors: List[DynamicSelector] = list() # A list of DynamicSelector objects, which contain TkinterDialog objects of their own.
         self.subDialogs: List[TkinterDialog] = list() # A list of TkinterDialog objects designated "sub-dialogs"
         self.selections: Selections = None # A selections object to be populated at the end of the dialog
@@ -280,11 +283,11 @@ class TkinterDialog(tk.Frame):
         "Create a checkbox that holds a bool input from the user."
         
         # Initialize the intVar to be modified by the checkbox
-        checkboxIntVar = tk.IntVar()
-        self.checkboxVars.append(checkboxIntVar)
+        checkboxBooleanVar = tk.BooleanVar()
+        self.checkboxVars.append(checkboxBooleanVar)
 
         # Create the checkbox
-        tk.Checkbutton(self, text = text, variable = checkboxIntVar).grid(row = row, column = column, columnspan = columnSpan, pady = 3, sticky = tk.W)
+        tk.Checkbutton(self, text = text, variable = checkboxBooleanVar).grid(row = row, column = column, columnspan = columnSpan, pady = 3, sticky = tk.W)
 
 
     def createButton(self, text, row, column, command, columnSpan = 1):
@@ -294,7 +297,7 @@ class TkinterDialog(tk.Frame):
 
     def createQuitButton(self, row, column, columnSpan = 1):
         """
-        DEPRECATED.  Use create Exit Buttons instead.
+        DEPRECATED.  Buttons are created in constructor now.
         Create a button that exits the python script.
         """
         self.createButton("Quit",row,column,quit, columnSpan=columnSpan)
@@ -302,7 +305,7 @@ class TkinterDialog(tk.Frame):
 
     def createReturnButton(self, row, column, columnSpan = 1):
         """
-        DEPRECATED.  Use create Exit Buttons instead.
+        DEPRECATED.  Buttons are created in constructor now.
         Create a button that returns the user input to the selections object
         """
         self.createButton("Go",row,column,self.generateSelections, columnSpan=columnSpan)
@@ -432,6 +435,31 @@ class TkinterDialog(tk.Frame):
             textField.xview(len(filename))
     
 
+    def go(self):
+        "This function is invoked when the \"Go\" button is pressed."
+
+        self.generateSelections()
+
+        # Open the file to save selections to.
+        selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
+                                                self.root.title+".txt")
+        checkDirs(os.path.dirname(selectionStorageFilePath))
+        with open(selectionStorageFilePath, 'w') as selectionStorageFile: self.saveSelections(selectionStorageFile)
+
+        self.rootWindow.destroy()
+
+
+    def beginRestore(self):
+        "This function is invoked when the \"Restore Selections\" button is pressed."
+
+        selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
+                                                self.root.title+".txt")
+        if not os.path.exists(selectionStorageFilePath): raise NoSavedSelectionsError
+        with open(selectionStorageFilePath, 'r') as selectionStorageFile:
+            try: self.restoreSelections(selectionStorageFile)
+            except: raise IncompatibleSelectionRestoreError
+
+
     def generateSelections(self):
         "Populates the selections object with the user's input and then destroys the widget."
 
@@ -479,8 +507,104 @@ class TkinterDialog(tk.Frame):
             subDialog.generateSelections()
             self.selections.addSelections(subDialog.selections)
 
-        # Destroy the dialog if this is the root.
-        if self.isRoot: self.rootWindow.destroy()
+
+    def saveSelections(self, selectionStorageFile: TextIO, nestingLevel = 0):
+        "Stores the current selections in a text file so that they can be quickly restored."
+
+        # Get all the different Selections-relevant variables from this dialog object
+        for individualFileEntry in self.individualFileEntries:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write(f"Individual_File_Path:{individualFileEntry[0].get()}\n")
+
+        for multipleFileSelector in self.multipleFileSelectors:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write(f"File_Path_Group:{':'.join(multipleFileSelector.getFilePaths())}\n")
+
+        for plainTextEntry in self.plainTextEntries:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write(f"Plain_Text_Entry:{plainTextEntry.get()}\n")
+
+        for checkboxVar in self.checkboxVars:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write(f"Toggle_State:{checkboxVar.get()}\n")
+
+        for stringVar in self.dropdownVars:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write(f"Dropdown_Selection:{stringVar.get()}\n")
+
+        # Store selections from active dialogs in dynamic displays
+        for i, dynamicSelector in enumerate(self.dynamicSelectors):
+            selectionStorageFile.write('\t'*nestingLevel)
+            if isinstance(dynamicSelector.controllerVar, tk.StringVar):
+                selectionStorageFile.write(f"Start_Dynamic_StringVar_Selector:{dynamicSelector.getControllerVar()}\n")
+            elif isinstance(dynamicSelector.controllerVar, tk.BooleanVar):
+                selectionStorageFile.write(f"Start_Dynamic_BooleanVar_Selector:{dynamicSelector.getControllerVar()}\n")
+            dynamicSelector.getCurrentDisplay().saveSelections(selectionStorageFile, nestingLevel + 1)
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write("End_Dynamic_Selector\n")
+
+        # Store selections from sub-dialogs
+        for subDialog in self.subDialogs:
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write("Start_Sub_Dialog\n")
+            subDialog.saveSelections(selectionStorageFile, nestingLevel = nestingLevel + 1)
+            selectionStorageFile.write('\t'*nestingLevel)
+            selectionStorageFile.write("End_Sub_Dialog\n")
+
+    def restoreSelections(self, selectionsStorageFile: TextIO):
+        "Restores the dialog selections from the file corresponding to the dialog's title."
+        
+        # Iterate through lines until EOF or one of the "End..." lines are encountered.
+        # Each group of elements should be present in its own cluster, in a predictable order.
+        # We can take advantage of this and use sequential while loops to track each group.
+        line = selectionsStorageFile.readline().strip()
+
+        count = 0
+        while line.startswith("Individual_File_Path"):
+            self.individualFileEntries[count][0].delete(0, tk.END)
+            self.individualFileEntries[count][0].insert(0, line.split(':')[1])
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        count = 0
+        while line.startswith("File_Path_Group"):
+            self.multipleFileSelectors[count].clearPathDisplays()
+            for filePath in line.split(':')[1:]:
+                self.multipleFileSelectors[count].addPathDisplay(filePath)
+            line = selectionsStorageFile.readline().strip(); count += 1
+            
+        count = 0
+        while line.startswith("Plain_Text_Entry"):
+            self.plainTextEntries[count].delete(0, tk.END)
+            self.plainTextEntries[count].insert(0, line.split(':')[1])
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        count = 0
+        while line.startswith("Toggle_State"):
+            self.checkboxVars[count].set(line.split(':')[1] == "True")
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        count = 0
+        while line.startswith("Dropdown_Selection"):
+            self.dropdownVars[count].set(line.split(':')[1])
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        count = 0
+        while line.startswith("Start_Dynamic"):
+            if line.startswith("Start_Dynamic_StringVar_Selector"):
+                self.dynamicSelectors[count].setControllerVar(line.split(':')[1])
+            elif line.startswith("Start_Dynamic_BooleanVar_Selector"):
+                self.dynamicSelectors[count].setControllerVar(line.split(':')[1] == "True")
+            self.dynamicSelectors[count].checkController()
+            self.dynamicSelectors[count].getCurrentDisplay().restoreSelections(selectionsStorageFile)
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        count = 0
+        while line.startswith("Start_Sub_Dialog"):
+            self.subDialogs[count].saveSelections(selectionsStorageFile)
+            line = selectionsStorageFile.readline().strip(); count += 1
+
+        # Make sure we haven't ended prematurely.
+        assert line.startswith("End") or not line
 
 
 class Selections:

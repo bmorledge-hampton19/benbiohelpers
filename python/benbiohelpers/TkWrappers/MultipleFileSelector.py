@@ -23,7 +23,7 @@ class MultipleFileSelector(tk.Frame):
                                      # (Used when sifting through directories for relevant files)
         self.additionalFileEndings = additionalFileEndings
         self.basenameContains = basenameContains
-        self.directories = list()
+        self.directories = list() # This might not be used at all... I'm too scared to delete it though...
         self.maxPathWidth = 0
 
         # Set the indentation for the list of file paths displays.
@@ -110,6 +110,11 @@ class MultipleFileSelector(tk.Frame):
         # Otherwise, just remove the given path display
         else: pathDisplay.destroy()
             
+
+    def clearPathDisplays(self):
+        "Removes all the PathDisplay objects"
+        for pathDisplay in self.getPaths(returnWholeObjects = True): self.removePathDisplay(pathDisplay)
+
 
     def updatePathDisplayLengths(self, maxPathWidth):
         "Updates the minimum width of the label portion of all the path displays."

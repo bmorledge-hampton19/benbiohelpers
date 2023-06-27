@@ -1,7 +1,7 @@
 # A Tk widget wich changes based on the state of a given "commander" widget.
 
 import tkinter as tk
-
+from typing import Dict, Any
 
 class DynamicSelector(tk.Frame):
     """
@@ -10,14 +10,16 @@ class DynamicSelector(tk.Frame):
 
     def __init__(self, master, workingDirectory):
 
+        from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
+
         self.workingDirectory = workingDirectory
         self.root = master.root
         super().__init__(master)
 
         self.controllerSetup = False # Flag to prevent multiple controllers
         self.controllerVar = None # The variable that determines which dynamic display is shown
-        self.dynamicDisplays = dict() # The displays corresponding to states of the controller var
-        self.currentDisplayKey = None # The current active display.  Helps prevent unnecessary dispaly switching.
+        self.dynamicDisplays: Dict[Any, TkinterDialog] = dict() # The displays corresponding to states of the controller var
+        self.currentDisplayKey = None # The current active display.  Helps prevent unnecessary display switching.
         self.defaultDisplayKey = None # Determines which display starts as active.
 
 
@@ -38,6 +40,8 @@ class DynamicSelector(tk.Frame):
     # Gives me confidence I am accessing Tkinter's strange variable system correctly.
     def getControllerVar(self): return self.controllerVar.get()
 
+    # Programmatically set the controller var.
+    def setControllerVar(self, newValue): self.controllerVar.set(newValue)
 
     def initDropdownController(self, labelText, options, row = 0, column = 0):
         "Initialize a dropdown as the controller for what dynamic content is displayed."
@@ -76,7 +80,7 @@ class DynamicSelector(tk.Frame):
             raise ValueError("Multiple controllers attempted to be set up on one dynamic selector.")
         else: self.controllerSetup = True
 
-        self.controllerVar = tk.IntVar()
+        self.controllerVar = tk.BooleanVar()
 
         checkbox = tk.Checkbutton(self, text = labelText, variable = self.controllerVar, command = self.checkController)
         checkbox.grid(row = row, column = column, pady = 3, sticky = tk.W)
