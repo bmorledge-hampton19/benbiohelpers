@@ -37,9 +37,13 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, adaptorSeqeuncesFil
 
 
 # For each of the given reads files, run the accompyaning bash script to perform the alignment.
-def alignReads(rawReadsFilePaths: List[str], adapterSequencesFilePath, bowtie2IndexBasenamePath, alignmentBashScriptFilePath, 
+def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSequencesFilePath = None, 
                     readCountsOutputFilePath = None, bowtie2BinaryPath = None, threads = 1, customBowtie2Arguments = '',
-                    findAdapters = False, pairedEndAlignment = False, pipelineEndpoint = ".bed", retainSamOutput = False):
+                    findAdapters = False, pairedEndAlignment = False, interleavedPairedEndFiles = False,
+                    pipelineEndpoint = ".bed", retainSamOutput = False):
+
+    # Get the bash alignment script file path.
+    alignmentBashScriptFilePath = os.path.join(os.path.dirname(__file__),"ParseRawReadsToBed.bash")
 
     # Make sure a valid pipelineEndpoint was given.
     if pipelineEndpoint not in (".bed", ".bed.gz", ".sam", ".sam.gz"):
@@ -47,7 +51,7 @@ def alignReads(rawReadsFilePaths: List[str], adapterSequencesFilePath, bowtie2In
                              'Expected ".bed", ".bed.gz", ".sam", or ".sam.gz"')
 
     # If performing paired end alignment, find pairs for all the given raw reads files.
-    if pairedEndAlignment:
+    if pairedEndAlignment and not interleavedPairedEndFiles:
         read1FilePaths = list(); read2FilePaths = list()
         for rawReadsFilePath in rawReadsFilePaths:
 
@@ -110,13 +114,14 @@ def alignReads(rawReadsFilePaths: List[str], adapterSequencesFilePath, bowtie2In
         checkDirs(tempDir)
 
         # Run the alignment script.
-        if pairedEndAlignment:
-            arguments = ["bash", alignmentBashScriptFilePath, "-1", read1FilePaths[i], "-2", read2FilePaths[i],
-                         "-a", thisAdapterSequencesFilePath, "-i", bowtie2IndexBasenamePath, "-t", str(threads),
-                         "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
+        if pairedEndAlignment and not interleavedPairedEndFiles:
+            arguments = ["bash", alignmentBashScriptFilePath, "-1", read1FilePaths[i], "-2", read2FilePaths[i]]
+        elif pairedEndAlignment and interleavedPairedEndFiles:
+            arguments = ["bash", alignmentBashScriptFilePath, "--interleaved", rawReadsFilePath]
         else:
-            arguments = ["bash", alignmentBashScriptFilePath, "-1", rawReadsFilePath, "-a", thisAdapterSequencesFilePath, 
-                         "-i", bowtie2IndexBasenamePath, "-t", str(threads), "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
+            arguments = ["bash", alignmentBashScriptFilePath, "-1", rawReadsFilePath]
+        arguments += ["-i", bowtie2IndexBasenamePath, "-t", str(threads), "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
+        if thisAdapterSequencesFilePath is not None: arguments += ["-a", thisAdapterSequencesFilePath]
         if bowtie2BinaryPath is not None: arguments += ["-b", bowtie2BinaryPath]
         if retainSamOutput: arguments += ["-s"]
         subprocess.run(arguments, check = True)
@@ -171,13 +176,17 @@ def parseArgs(args):
 def main():
 
     # Create a simple dialog for selecting the relevant files.
-    with TkinterDialog() as dialog:
+    with TkinterDialog(title = "Benbiohelpers Read Aligner") as dialog:
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz",
                                         ("Fastq Files", (".fastq.gz", ".fastq")), ("fastq Files", ".fastq"),
                                         additionalFileEndings=[".fastq"])
         dialog.createFileSelector("Bowtie2 Index File (Any):", 1, ("Bowtie2 Index File", ".bt2"))
 
-        dialog.createDropdown("Alignment method:", 2, 0, ("Single-end", "Paired-end"))
+        with dialog.createDynamicSelector(2, 0) as endModeDS:
+            endModeDS.initDropdownController("Alignment method:", ("Single-end", "Paired-end"))
+            endModeDS.initDisplay("Paired-end", "Paired-end").createDropdown(
+                "Paired-end file format", 0, 0, ("One file per end (two files)", "Interleaved reads (single file)")
+            )
 
         with dialog.createDynamicSelector(3, 0) as adaptorSequencesDS:
             adaptorSequencesDS.initDropdownController("Adapter type",
@@ -225,7 +234,10 @@ def main():
     bowtie2IndexBasenamePath = bowtie2IndexBasenamePath.rsplit('.', 2)[0]
     if bowtie2IndexBasenamePath.endswith(".rev"): bowtie2IndexBasenamePath = bowtie2IndexBasenamePath.rsplit('.', 1)[0]
 
-    if dialog.selections.getDropdownSelections()[0] == "Paired-end": pairedEndAlignment = True
+    interleavedPairedEndFiles = False
+    if endModeDS.currentDisplayKey == "Paired-end":
+        pairedEndAlignment = True
+        if dialog.selections.getDropdownSelections("Paired-end")[0].startswith("Interleaved"): interleavedPairedEndFiles = True
     else: pairedEndAlignment = False
 
     findAdapters = False
@@ -236,9 +248,9 @@ def main():
     elif adaptorSequencesDS.getControllerVar() == "Find Adapters":
         adaptorSequencesFilePath = dialog.selections.getIndividualFilePaths("potentialAdapterSequences")[0]
         findAdapters = True
-    else: adaptorSequencesFilePath = "NONE"
+    else: adaptorSequencesFilePath = None
 
-    threads = int(dialog.selections.getDropdownSelections()[1])
+    threads = int(dialog.selections.getDropdownSelections()[0])
 
     if readCountsDS.getControllerVar():
         readCountsOutputFilePath = dialog.selections.getIndividualFilePaths("readCounts")[0]
@@ -247,8 +259,6 @@ def main():
     if bowtie2BinaryDS.getControllerVar():
         bowtie2BinaryPath = dialog.selections.getIndividualFilePaths("bowtieBinary")[0]
     else: bowtie2BinaryPath = None
-
-    alignmentBashScriptFilePath = os.path.join(os.path.dirname(__file__),"ParseRawReadsToBed.bash")
 
     if customArgsDS.getControllerVar() == "None":
         customBowtie2Arguments = ''
@@ -269,9 +279,9 @@ def main():
         pipelineEndpoint = ".bed"
         retainSamOutput = False
 
-    alignReads(filteredRawReadsFilePaths, adaptorSequencesFilePath, bowtie2IndexBasenamePath, alignmentBashScriptFilePath, 
-                    readCountsOutputFilePath, bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment,
-                    pipelineEndpoint, retainSamOutput)
+    alignReads(filteredRawReadsFilePaths, bowtie2IndexBasenamePath, adaptorSequencesFilePath, readCountsOutputFilePath,
+               bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment, interleavedPairedEndFiles,
+               pipelineEndpoint, retainSamOutput)
 
 
 if __name__ == "__main__": main()
