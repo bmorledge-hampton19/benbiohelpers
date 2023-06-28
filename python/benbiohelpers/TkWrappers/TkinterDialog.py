@@ -518,7 +518,7 @@ class TkinterDialog(tk.Frame):
 
         for multipleFileSelector in self.multipleFileSelectors:
             selectionStorageFile.write('\t'*nestingLevel)
-            selectionStorageFile.write(f"File_Path_Group:{':'.join(multipleFileSelector.getFilePaths())}\n")
+            selectionStorageFile.write(f"File_Path_Group:{':'.join(multipleFileSelector.getPaths())}\n")
 
         for plainTextEntry in self.plainTextEntries:
             selectionStorageFile.write('\t'*nestingLevel)
