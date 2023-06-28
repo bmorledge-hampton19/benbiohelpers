@@ -131,22 +131,9 @@ def checkForNumber(inputToCheck, enforceInt = False, validityCondition = None, v
     the value can also be cast as an int. If validityCondition is not None, it should be a function
     which takes a single numeric value and returns true or false.
     If the input passes all checks, return it.
+    NOTE: This function is now merely an interface to the preferred function in the InputParsing module.
+        While it is retained for backwards compatibility, importing it is deprecated.
     """
 
-    raiseNonIntInput = False
-    raiseNonNumericInput = False
-
-    if enforceInt:
-        try: numericInput = int(inputToCheck)
-        except ValueError: raiseNonIntInput = True
-    else:
-        try: numericInput = float(inputToCheck)
-        except ValueError: raiseNonNumericInput = True
-
-    if raiseNonIntInput: raise NonIntInput(inputToCheck)
-    if raiseNonNumericInput: raise NonNumericInput(inputToCheck)
-
-    if validityCondition is not None and not validityCondition(numericInput):
-        raise InvalidNumericInput(numericInput, validityText)
-
-    return numericInput
+    from benbiohelpers.InputParsing.CheckForNumber import checkForNumber as IPCheckForNumber
+    IPCheckForNumber(inputToCheck, enforceInt, validityCondition, validityText)
