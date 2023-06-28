@@ -11,7 +11,7 @@ from typing import List
 def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenamePath,
                   adapterSequencesFilePath = None, bowtie2Version = None, customBowtie2Arguments = None):
 
-    if pairedEndAlignment: basename = os.path.basename(rawReadsFilePath).rsplit("_R1.fastq", 1)[0]
+    if pairedEndAlignment: basename = os.path.basename(rawReadsFilePath).rsplit('_', 1)[0]
     else: basename = os.path.basename(rawReadsFilePath).rsplit(".fastq", 1)[0]
     checkDirs(os.path.join(os.path.dirname(rawReadsFilePath),".metadata"))
     metadataFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".metadata",f"{basename}_alignment.metadata")
