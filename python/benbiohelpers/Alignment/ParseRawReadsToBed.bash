@@ -8,6 +8,7 @@ trimmomaticPath=$(dpkg -L trimmomatic | grep .jar$ | head -1)
 inputReads2=""
 adapterFile="NONE"
 retainSamOutput=false
+interleavedPEInput=false
 
 while [[ $# > 0 ]]; do
   case $1 in
@@ -53,6 +54,10 @@ while [[ $# > 0 ]]; do
       ;;
     -s|--retain-sam-output)
       retainSamOutput=true
+      shift
+      ;;
+    --interleaved)
+      interleavedPEInput=true
       shift
       ;;
     -*|--*)
@@ -132,6 +137,10 @@ if [[ $adapterFile != "NONE" ]]
 then
     if [[ -z "$inputReads2" ]]
     then
+    if [ "$interleavedPEInput" = true ]
+        then
+            echo "Warning: trimmomatic cannot perform paired end trimming on interleaved files."
+        fi
         echo "Trimming adapters in single-end mode..."
         java -jar $trimmomaticPath SE -threads $threads $inputReads1 $trimmedFastq "ILLUMINACLIP:$adapterFile:2:30:10"
     else
@@ -155,13 +164,25 @@ fi
 echo "Aligning reads with bowtie2..."
 if [[ -z "$inputReads2" ]]
 then
-    if [[ -z "$customBowtie2Arguments" ]]
+    if [ "$interleavedPEInput" = true ]
     then
-        $bowtie2Binary -x $bt2IndexBasename -U $trimmedFastq -S $bowtieSAMOutput -p $threads \
-        |& tail -6 | tee $bowtieStatsOutput
+        if [[ -z "$customBowtie2Arguments" ]]
+        then
+            $bowtie2Binary -x $bt2IndexBasename --interleaved $trimmedFastq -S $bowtieSAMOutput -p $threads \
+            |& tail -20 | tee $bowtieStatsOutput
+        else
+            $bowtie2Binary -x $bt2IndexBasename --interleaved $trimmedFastq -S $bowtieSAMOutput -p $threads \
+            $customBowtie2Arguments |& tail -20 | tee $bowtieStatsOutput
+        fi
     else
-        $bowtie2Binary -x $bt2IndexBasename -1 $trimmedFastqP1 -2 $trimmedFastqP2 -S $bowtieSAMOutput -p $threads \
-        $customBowtie2Arguments |& tail -6 | tee $bowtieStatsOutput
+        if [[ -z "$customBowtie2Arguments" ]]
+        then
+            $bowtie2Binary -x $bt2IndexBasename -U $trimmedFastq -S $bowtieSAMOutput -p $threads \
+            |& tail -6 | tee $bowtieStatsOutput
+        else
+            $bowtie2Binary -x $bt2IndexBasename -U $trimmedFastq -S $bowtieSAMOutput -p $threads \
+            $customBowtie2Arguments |& tail -6 | tee $bowtieStatsOutput
+        fi
     fi
 else
     if [[ -z "$customBowtie2Arguments" ]]

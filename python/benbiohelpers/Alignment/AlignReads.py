@@ -118,7 +118,7 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         if pairedEndAlignment and not interleavedPairedEndFiles:
             arguments = ["bash", alignmentBashScriptFilePath, "-1", read1FilePaths[i], "-2", read2FilePaths[i]]
         elif pairedEndAlignment and interleavedPairedEndFiles:
-            arguments = ["bash", alignmentBashScriptFilePath, "--interleaved", rawReadsFilePath]
+            arguments = ["bash", alignmentBashScriptFilePath, "-1", rawReadsFilePath, "--interleaved"]
         else:
             arguments = ["bash", alignmentBashScriptFilePath, "-1", rawReadsFilePath]
         arguments += ["-i", bowtie2IndexBasenamePath, "-t", str(threads), "-c", customBowtie2Arguments, "-p", pipelineEndpoint]
