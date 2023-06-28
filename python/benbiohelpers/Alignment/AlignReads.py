@@ -61,15 +61,15 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
 
             # Find the pair and assign each pair to their respective list.
             baseName = rawReadsFilePath.rsplit(".fastq",1)[0]
-            if baseName.endswith("1"):
+            if baseName.endswith("_1") or baseName.endswith("_R1"):
                 read1FilePaths.append(rawReadsFilePath)
                 pairedBaseName = baseName[:-1] + '2'
                 pairedList = read2FilePaths
-            elif baseName.endswith("2"):
+            elif baseName.endswith("_2") or baseName.endswith("_R2"):
                 read2FilePaths.append(rawReadsFilePath)
                 pairedBaseName = baseName[:-1] + '1'
                 pairedList = read1FilePaths
-            else: raise InvalidPathError(rawReadsFilePath, "Given path does not end with \"1\" or \"2\" "
+            else: raise InvalidPathError(rawReadsFilePath, "Given path does not end with \"_1\", \"_R1\", \"_2\" or \"_R2\" "
                                                            "(prior to file extension; e.g. my_reads_2.fastq.gz is valid.)")
 
             pairFound = False
@@ -98,7 +98,7 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         readsFileStartTime = time.time()
         print()
         if pairedEndAlignment: 
-            print(f"Processing file pair with basename {os.path.basename(rawReadsFilePath).rsplit('_R1',1)[0]}")
+            print(f"Processing file pair with basename {os.path.basename(rawReadsFilePath).rsplit('_',1)[0]}")
         else: print("Processing file",os.path.basename(rawReadsFilePath))
         print('(',currentReadFileNum,'/',totalReadsFiles,')', sep = '') 
 

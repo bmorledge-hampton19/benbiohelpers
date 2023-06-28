@@ -94,7 +94,12 @@ fi
 # Don't forget to trim the read identifier off of the data name if the data is paired-end.
 if [[ ! -z "$inputReads2" ]]
 then
-    dataName=${dataName%_R1}
+    if [[ $dataName == *_R1 ]]
+    then
+        dataName=${dataName%_R1}
+    else
+        dataName=${dataName%_1}
+    fi
 fi
 
 if [[ -z "$inputReads2" ]]
