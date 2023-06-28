@@ -5,10 +5,11 @@
 import os, subprocess, time, shutil
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
+from benbiohelpers.InputParsing.CheckForNumber import checkForNumber
 
 # Given a file path to a list of run accession IDs and an optional file path to their corresponding names,
 # uses sra-tools to retrieve the fastq sequences.
-def sRA_ToFastq(runAccessionIDsFilePath, getNamesFromCol2 = False):
+def sRA_ToFastq(runAccessionIDsFilePath, getNamesFromCol2 = False, threads = 1):
     
     startTime = time.time()
     gzippedFastqFiles = list()
@@ -48,7 +49,7 @@ def sRA_ToFastq(runAccessionIDsFilePath, getNamesFromCol2 = False):
             for item in os.listdir(alignmentFilesDir):
                 if item.endswith(".fastq"): 
                     print(f"gzipping {item}")
-                    subprocess.check_call(("gzip", "-f", os.path.join(alignmentFilesDir, item)))
+                    subprocess.check_call(("pigz", "-f", "-p", str(threads), os.path.join(alignmentFilesDir, item)))
                     gzippedFastqFiles.append(os.path.join(alignmentFilesDir, item+".gz"))
             print(f"Time to gzip files: {time.time() - gzipStartTime} seconds")
 
@@ -66,9 +67,11 @@ def main():
     # Create the UI.
     with TkinterDialog(title = "SRA to Fastq") as dialog:
         dialog.createFileSelector("SRA run accession IDs:", 0, ("text file",".txt"), ("Tab separated values file", ".tsv"))
-        dialog.createCheckbox("Get names from second column in file (tab-separated).", 1, 0)
+        dialog.createCheckbox("Get names from second column in file (tab-separated)", 1, 0)
+        dialog.createTextField("Threads to use while gzipping:", 2, 0, defaultText = 1)
 
-    sRA_ToFastq(dialog.selections.getIndividualFilePaths()[0], dialog.selections.getToggleStates()[0])
+    threads = checkForNumber(dialog.selections.getTextEntries()[0], True, lambda x:x>0, "Expected a positive-integer number of threads")
+    sRA_ToFastq(dialog.selections.getIndividualFilePaths()[0], dialog.selections.getToggleStates()[0], threads)
     
 
 if __name__ == "__main__": main()
