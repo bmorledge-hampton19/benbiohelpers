@@ -7,8 +7,8 @@ from typing import List
 
 
 # Write metadata on the parameters for the alignment, for future reference.
-def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, adaptorSeqeuncesFilePath, bowtie2IndexBasenamePath,
-                  bowtie2Version = None, customBowtie2Arguments = None):
+def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenamePath,
+                  adapterSequencesFilePath = None, bowtie2Version = None, customBowtie2Arguments = None):
 
     if pairedEndAlignment: basename = os.path.basename(rawReadsFilePath).rsplit("_R1.fastq", 1)[0]
     else: basename = os.path.basename(rawReadsFilePath).rsplit(".fastq", 1)[0]
@@ -16,11 +16,11 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, adaptorSeqeuncesFil
     metadataFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".metadata",f"{basename}_alignment.metadata")
     with open(metadataFilePath, 'w') as metadataFile:
 
-        if bowtie2Version is None:
-            bowtie2Version = subprocess.check_output(("bowtie2","--version"), encoding=("utf-8"))
+        if bowtie2Version is None: bowtie2Version = subprocess.check_output(("bowtie2","--version"), encoding=("utf-8"))
 
         metadataFile.write("Path_to_Index:\n" + bowtie2IndexBasenamePath + "\n\n")
-        metadataFile.write("Path_to_Adaptor_Sequences:\n" + adaptorSeqeuncesFilePath + "\n\n")
+        if adapterSequencesFilePath is not None:
+            metadataFile.write("Path_to_Adapter_Sequences:\n" + adapterSequencesFilePath + "\n\n")
         metadataFile.write("Bowtie2_Version:\n" + bowtie2Version + "\n")
         metadataFile.write("Bowtie2_Stats:\n")
         bowtie2StatsFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".tmp",f"{basename}_bowtie2_stats.txt")
@@ -60,28 +60,28 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
 
             # Find the pair and assign each pair to their respective list.
             baseName = rawReadsFilePath.rsplit(".fastq",1)[0]
-            if baseName.endswith("R1"):
+            if baseName.endswith("1"):
                 read1FilePaths.append(rawReadsFilePath)
                 pairedBaseName = baseName[:-1] + '2'
                 pairedList = read2FilePaths
-            elif baseName.endswith("R2"):
+            elif baseName.endswith("2"):
                 read2FilePaths.append(rawReadsFilePath)
                 pairedBaseName = baseName[:-1] + '1'
                 pairedList = read1FilePaths
-            else: raise InvalidPathError(rawReadsFilePath, "Given path does not end with \"R1\" or \"R2\" "
-                                                           "(prior to file extension; e.g. my_reads_R2.fastq.gz is valid.)")
+            else: raise InvalidPathError(rawReadsFilePath, "Given path does not end with \"1\" or \"2\" "
+                                                           "(prior to file extension; e.g. my_reads_2.fastq.gz is valid.)")
 
             pairFound = False
             for fileExtension in (".fastq", ".fastq.gz"):
                 pairedFilePath = pairedBaseName + fileExtension
                 if os.path.exists(pairedFilePath): 
                     pairedList.append(pairedFilePath)
-                    print(f"Found fastq file pair with basename: {os.path.basename(pairedBaseName).rsplit('_R',1)[0]}")
+                    print(f"Found fastq file pair with basename: {os.path.basename(pairedBaseName).rsplit('_',1)[0]}")
                     pairFound = True
                     break
 
             if not pairFound: raise InvalidPathError(rawReadsFilePath, "No matching pair found. Expected paired files (in same "
-                                                                       "directory) ending in \"R1\" and \"R2\", but only found:")
+                                                                       "directory) ending in \"1\" and \"2\", but only found:")
 
         rawReadsFilePaths = read1FilePaths
 
@@ -149,8 +149,8 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         print(f"Total time spent aligning across all files: {time.time() - scriptStartTime} seconds")
 
         # Write the metadata.
-        writeMetadata(rawReadsFilePath, pairedEndAlignment, thisAdapterSequencesFilePath, bowtie2IndexBasenamePath, 
-                      bowtie2BinaryPath, customBowtie2Arguments)
+        writeMetadata(rawReadsFilePath, pairedEndAlignment, bowtie2IndexBasenamePath, 
+                      thisAdapterSequencesFilePath, bowtie2BinaryPath, customBowtie2Arguments)
 
     # Write the read counts if requested.
     if readCountsOutputFilePath is not None:
@@ -188,13 +188,13 @@ def main():
                 "Paired-end file format", 0, 0, ("One file per end (two files)", "Interleaved reads (single file)")
             )
 
-        with dialog.createDynamicSelector(3, 0) as adaptorSequencesDS:
-            adaptorSequencesDS.initDropdownController("Adapter type",
+        with dialog.createDynamicSelector(3, 0) as adapterSequencesDS:
+            adapterSequencesDS.initDropdownController("Adapter type",
                                                       ("Custom", "Find Adapters", "XR-seq Adapters", "None"))
-            adaptorSequencesSelector = adaptorSequencesDS.initDisplay("Custom", selectionsID = "customAdapterSequences")
-            adaptorSequencesSelector.createFileSelector("Custom Adapters Sequences File:", 0, ("Fasta Files", ".fa"))
-            adaptorSequencesSelector = adaptorSequencesDS.initDisplay("Find Adapters", selectionsID = "potentialAdapterSequences")
-            adaptorSequencesSelector.createFileSelector("Potential Adapter Sequences File:", 0, ("Fasta Files", ".fa"))
+            adapterSequencesSelector = adapterSequencesDS.initDisplay("Custom", selectionsID = "customAdapterSequences")
+            adapterSequencesSelector.createFileSelector("Custom Adapters Sequences File:", 0, ("Fasta Files", ".fa"))
+            adapterSequencesSelector = adapterSequencesDS.initDisplay("Find Adapters", selectionsID = "potentialAdapterSequences")
+            adapterSequencesSelector.createFileSelector("Potential Adapter Sequences File:", 0, ("Fasta Files", ".fa"))
 
         dialog.createDropdown("How many Threads should be used?", 4, 0, ['1', '2', '3', '4', '5', '6', '7', '8'])
 
@@ -241,14 +241,14 @@ def main():
     else: pairedEndAlignment = False
 
     findAdapters = False
-    if adaptorSequencesDS.getControllerVar() == "XR-seq Adapters":
-        adaptorSequencesFilePath = os.path.join(os.path.dirname(__file__), "XR-seq_primers.fa")
-    elif adaptorSequencesDS.getControllerVar() == "Custom":
-        adaptorSequencesFilePath = dialog.selections.getIndividualFilePaths("customAdapterSequences")[0]
-    elif adaptorSequencesDS.getControllerVar() == "Find Adapters":
-        adaptorSequencesFilePath = dialog.selections.getIndividualFilePaths("potentialAdapterSequences")[0]
+    if adapterSequencesDS.getControllerVar() == "XR-seq Adapters":
+        adapterSequencesFilePath = os.path.join(os.path.dirname(__file__), "XR-seq_primers.fa")
+    elif adapterSequencesDS.getControllerVar() == "Custom":
+        adapterSequencesFilePath = dialog.selections.getIndividualFilePaths("customAdapterSequences")[0]
+    elif adapterSequencesDS.getControllerVar() == "Find Adapters":
+        adapterSequencesFilePath = dialog.selections.getIndividualFilePaths("potentialAdapterSequences")[0]
         findAdapters = True
-    else: adaptorSequencesFilePath = None
+    else: adapterSequencesFilePath = None
 
     threads = int(dialog.selections.getDropdownSelections()[0])
 
@@ -279,7 +279,7 @@ def main():
         pipelineEndpoint = ".bed"
         retainSamOutput = False
 
-    alignReads(filteredRawReadsFilePaths, bowtie2IndexBasenamePath, adaptorSequencesFilePath, readCountsOutputFilePath,
+    alignReads(filteredRawReadsFilePaths, bowtie2IndexBasenamePath, adapterSequencesFilePath, readCountsOutputFilePath,
                bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment, interleavedPairedEndFiles,
                pipelineEndpoint, retainSamOutput)
 

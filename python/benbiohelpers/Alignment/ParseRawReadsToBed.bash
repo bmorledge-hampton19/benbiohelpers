@@ -6,6 +6,7 @@
 trimmomaticPath=$(dpkg -L trimmomatic | grep .jar$ | head -1)
 
 inputReads2=""
+adapterFile="NONE"
 retainSamOutput=false
 
 while [[ $# > 0 ]]; do
