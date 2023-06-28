@@ -3,6 +3,7 @@ from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs, getIsolatedParentDir
 from benbiohelpers.CustomErrors import InvalidPathError, UserInputError
 from benbiohelpers.Alignment.FindAdapters import findAdapters as findAdaptersFunc
+from benbiohelpers.InputParsing.CheckForNumber import checkForNumber
 from typing import List
 
 
@@ -196,7 +197,7 @@ def main():
             adapterSequencesSelector = adapterSequencesDS.initDisplay("Find Adapters", selectionsID = "potentialAdapterSequences")
             adapterSequencesSelector.createFileSelector("Potential Adapter Sequences File:", 0, ("Fasta Files", ".fa"))
 
-        dialog.createDropdown("How many Threads should be used?", 4, 0, ['1', '2', '3', '4', '5', '6', '7', '8'])
+        dialog.createTextField("How many Threads should be used?", 4, 0, defaultText="1")
 
         with dialog.createDynamicSelector(5, 0) as additionalOptions:
             additionalOptions.initDropdownController("Additional Options:", ("Ignore", "Use"))
@@ -250,7 +251,7 @@ def main():
         findAdapters = True
     else: adapterSequencesFilePath = None
 
-    threads = int(dialog.selections.getDropdownSelections()[0])
+    threads = checkForNumber(dialog.selections.getTextEntries()[0], True, lambda x:x>0, "Expected a positive-integer number of threads")
 
     if readCountsDS.getControllerVar():
         readCountsOutputFilePath = dialog.selections.getIndividualFilePaths("readCounts")[0]
