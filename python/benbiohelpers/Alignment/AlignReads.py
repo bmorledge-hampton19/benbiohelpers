@@ -177,7 +177,7 @@ def parseArgs(args):
 def main():
 
     # Create a simple dialog for selecting the relevant files.
-    with TkinterDialog(title = "Benbiohelpers Read Aligner") as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Benbiohelpers Read Aligner") as dialog:
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz",
                                         ("Fastq Files", (".fastq.gz", ".fastq")), ("fastq Files", ".fastq"),
                                         additionalFileEndings=[".fastq"])

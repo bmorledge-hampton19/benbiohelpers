@@ -65,7 +65,7 @@ def sRA_ToFastq(runAccessionIDsFilePath, getNamesFromCol2 = False, threads = 1):
 def main():
 
     # Create the UI.
-    with TkinterDialog(title = "SRA to Fastq") as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "SRA to Fastq") as dialog:
         dialog.createFileSelector("SRA run accession IDs:", 0, ("text file",".txt"), ("Tab separated values file", ".tsv"))
         dialog.createCheckbox("Get names from second column in file (tab-separated)", 1, 0)
         dialog.createTextField("Threads to use while gzipping:", 2, 0, defaultText = 1)

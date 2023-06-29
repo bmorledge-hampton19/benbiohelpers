@@ -57,7 +57,7 @@ def getFastqSubset(filePath: str, reads = 10000, outputDir = None):
 
 
 def main():
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Get File Subset") as dialog:
         dialog.createMultipleFileSelector("Files to subset: ", 0, None)
         dialog.createTextField("Start Position (0-based)", 1, 0, defaultText = str(10**5*4))
         dialog.createTextField("End Position (1-based)", 2, 0, defaultText = str(10**5*4 * 2 + 10**4*4))

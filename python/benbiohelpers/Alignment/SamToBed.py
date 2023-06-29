@@ -30,7 +30,7 @@ def samToBed(samFilePaths: List[str]):
 
 def main():
 
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Sam to Bed") as dialog:
         dialog.createMultipleFileSelector("Sam Files:", 0, ".sam", ("Sam Files",(".sam.gz",".sam")),
                                           additionalFileEndings = ".sam.gz")
 

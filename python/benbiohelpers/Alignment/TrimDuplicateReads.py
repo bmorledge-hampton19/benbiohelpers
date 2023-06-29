@@ -43,7 +43,7 @@ def trimDuplicateReads(readsFilePaths: List[str]):
 def main():
 
     # Create a simple dialog for selecting the gene designation files.
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Trim Duplicate Reads") as dialog:
         dialog.createMultipleFileSelector("Bed formatted reads:", 0, ".bed", 
                                           ("Bed Files", ".bed"))
 

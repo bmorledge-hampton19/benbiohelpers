@@ -2,7 +2,6 @@
 # E.g. 3 nucleotides added to each side. The original bed positions remain unchanged.
 import os
 from typing import List
-from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 from benbiohelpers.FileSystemHandling.BedToFasta import bedToFasta
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
 from benbiohelpers.FileSystemHandling.FastaFileIterator import FastaFileIterator
@@ -101,7 +100,7 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
 def main():
     
     # Get information from the user on what files should be expanded and how.
-    with TkinterDialog(workingDirectory = getDataDirectory()) as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Expand Sequence Context") as dialog:
         dialog.createMultipleFileSelector("Unexpanded Bed Files:", 0, ".bed", ("Bed Files",".bed"))
         dialog.createFileSelector("Genome File:", 1, ("Fasta Files",".fa"))
         dialog.createTextField("Nucleotides to expand by:", 2, 0, defaultText = "3")

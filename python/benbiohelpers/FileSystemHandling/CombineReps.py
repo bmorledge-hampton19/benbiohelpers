@@ -58,10 +58,10 @@ def main():
         from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
         workingDirectory = getDataDirectory()
     except ImportError:
-        workingDirectory = os.path.dirname(__file__)
+        workingDirectory = workingDirectory = os.getenv("HOME"), 
 
     #Create the Tkinter UI
-    with TkinterDialog(workingDirectory=workingDirectory) as dialog:
+    with TkinterDialog(workingDirectory=workingDirectory, title = "Combine Reps") as dialog:
         dialog.createFileSelector("Parent Directory:", 0, directory = True)
         dialog.createTextField("Expected Repetitions:", 1, 0, defaultText='2')
         dialog.createTextField("Repetition String Base:", 2, 0, defaultText = "rep")

@@ -3,7 +3,6 @@
 from benbiohelpers.FileSystemHandling.BedToFasta import bedToFasta
 from benbiohelpers.FileSystemHandling.FastaFileIterator import FastaFileIterator
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
-from mutperiodpy.helper_scripts.UsefulFileSystemFunctions import getDataDirectory
 
 import os
 
@@ -54,7 +53,7 @@ def addSequenceToBed(bedFilePath: str, genomeFastaFilePath: str, substitutionPos
 def main():
 
     # Create the Tkinter UI
-    dialog = TkinterDialog(workingDirectory=getDataDirectory())
+    dialog = TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Add Sequence to Bed")
     dialog.createFileSelector("Bed File:",0,("Bed Files",".bed"))    
     dialog.createFileSelector("Genome Fasta File:",1,("Fasta Files",".fa"))
 

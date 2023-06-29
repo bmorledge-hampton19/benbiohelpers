@@ -108,7 +108,7 @@ def findAdapters(fastqFilePaths: List[str], adapterFilePath, threshold = 0.05, d
 
 def main():
 
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Find Adapters") as dialog:
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz",
                                         ("Gzipped fastq Files", ".fastq.gz"), ("fastq Files", ".fastq"),
                                         additionalFileEndings=[".fastq"])

@@ -39,7 +39,7 @@ def trimmedFastqToSam(fastqFilePaths: List[str], bowtie2IndexBasenamePath, bowti
 
 def main():
 
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Trimmed Fastq to Sam") as dialog:
         dialog.createMultipleFileSelector("Trimmed fastq reads:", 0, "trimmed.fastq.gz", 
                                           ("Gzipped fastq Files", ".fastq.gz"))
         dialog.createFileSelector("Bowtie2 Index File (Any):", 1, ("Bowtie2 Index File", ".bt2"))

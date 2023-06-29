@@ -17,7 +17,7 @@ def trimAdaptorSequences(fastqFilePaths: List[str], adaptorSequencesFilePath):
 
 def main():
 
-    with TkinterDialog() as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Trim Adapter Sequences") as dialog:
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz", 
                                           ("Gzipped fastq Files", ".fastq.gz"))
         dialog.createFileSelector("Adaptor Sequences:", 1, ("Fasta Files", ".fa"))
