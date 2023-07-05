@@ -53,7 +53,7 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
 
     # If performing paired end alignment, find pairs for all the given raw reads files.
     if pairedEndAlignment and not interleavedPairedEndFiles:
-        read1FilePaths = list(); read2FilePaths = list()
+        read1FilePaths: List[str] = list(); read2FilePaths: List[str] = list()
         for rawReadsFilePath in rawReadsFilePaths:
 
             # It's possible we have already assigned this file path as a pair of a previous path. Double check!
@@ -90,6 +90,7 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
     scriptStartTime = time.time()
     currentReadFileNum = 0
     totalReadsFiles = len(rawReadsFilePaths)
+    outputFilePaths = list()
 
     for i, rawReadsFilePath in enumerate(rawReadsFilePaths):
 
@@ -153,11 +154,18 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         writeMetadata(rawReadsFilePath, pairedEndAlignment, bowtie2IndexBasenamePath, 
                       thisAdapterSequencesFilePath, bowtie2BinaryPath, customBowtie2Arguments)
 
+        # Add the output file path to the list
+        if pairedEndAlignment: readsBasePath = read1FilePaths[i].rsplit(".fastq", 1)[0].rsplit('_', 1)[0]
+        else: readsBasePath = rawReadsFilePath.rsplit(".fastq", 1)[0]
+        outputFilePaths.append(readsBasePath + pipelineEndpoint)
+
     # Write the read counts if requested.
     if readCountsOutputFilePath is not None:
         with open(readCountsOutputFilePath, 'w') as readCountsOutputFile:
             for rawReadsFileBasename in readCounts:
                 readCountsOutputFile.write(rawReadsFileBasename + ": " + readCounts[rawReadsFileBasename] + '\n')
+
+    return outputFilePaths
 
 
 # Removes trimmed reads file paths from a list of fastq reads file paths.
