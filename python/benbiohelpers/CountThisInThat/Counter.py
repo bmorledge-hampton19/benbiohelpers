@@ -28,8 +28,10 @@ class ThisInThatCounter(ABC):
     def __init__(self, encompassedFeaturesFilePath, encompassingFeaturesFilePath, 
                  outputFilePath, acceptableChromosomes = None, checkForSortedFiles = (True,True),
                  headersInEncompassedFeatures = False, headersInEncompassingFeatures = False,
-                 encompassingFeatureExtraRadius = 0, writeIncrementally = 0, sortOutputOnExit = False):
+                 encompassingFeatureExtraRadius = 0, writeIncrementally = 0, sortOutputOnExit = False,
+                 suppressOutput = False):
 
+        self.suppressOutput = suppressOutput
         self.checkForSortedInput(encompassedFeaturesFilePath, encompassingFeaturesFilePath, checkForSortedFiles)
 
         # Open the encompassed and encompassing files to compare against one another.
@@ -70,10 +72,10 @@ class ThisInThatCounter(ABC):
         The checkForSortedFiles parameter should be a two-item tuple containing boolean values telling whether to
         check the encompassed and encompassing feature files respectively.
         """
-        print("Checking input files for proper sorting...")
+        if not self.suppressOutput: print("Checking input files for proper sorting...")
 
         if checkForSortedFiles[0]:
-            print("Checking encompassed features file for proper sorting...")
+            if not self.suppressOutput: print("Checking encompassed features file for proper sorting...")
             try:
                 subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassedFeaturesFilePath))
             except subprocess.CalledProcessError:
@@ -82,7 +84,7 @@ class ThisInThatCounter(ABC):
                                          "followed by start and end position.")
             
         if checkForSortedFiles[1]:
-            print("Checking encompassing features file for proper sorting...")
+            if not self.suppressOutput: print("Checking encompassing features file for proper sorting...")
             try:
                 subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-c", encompassingFeaturesFilePath))
             except subprocess.CalledProcessError:
@@ -155,7 +157,7 @@ class ThisInThatCounter(ABC):
             # Inform the user every time a new chromosome is encountered in an encompassing feature
             if (self.previousEncompassingFeature is None 
                 or self.previousEncompassingFeature.chromosome != self.currentEncompassingFeature.chromosome):
-                print("Counting in",self.currentEncompassingFeature.chromosome)
+                if not self.suppressOutput: print("Counting in",self.currentEncompassingFeature.chromosome)
 
         # Check confirmed encompasssed features against the new encompassing feature.  (Unless this is the first encompassing feature)
         if self.previousEncompassingFeature is not None: self.checkConfirmedEncompassedFeatures()
@@ -199,7 +201,7 @@ class ThisInThatCounter(ABC):
 
     def setupOutputDataWriter(self):
         """
-        Use this funciton to set up the output data writer.
+        Use this function to set up the output data writer.
         Default behavior creates the output data writer with the counter's "outputFilePath" value
         """
         self.outputDataHandler.createOutputDataWriter(self.outputFilePath)
@@ -333,5 +335,5 @@ class ThisInThatCounter(ABC):
         # based on the sorting enforced by the checkForSortedInput function, and I think the logic kinda assumes they are.
         # So... Yeah. Should probably do something about that.
         if self.sortOutputOnExit:
-            print("Sorting output...")
+            if not self.suppressOutput: print("Sorting output...")
             subprocess.check_output(("sort","-k1,1","-k2,2n", "-k3,3n", "-s", "-o", self.outputFilePath, self.outputFilePath))
