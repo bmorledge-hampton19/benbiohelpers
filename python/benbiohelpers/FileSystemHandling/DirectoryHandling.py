@@ -55,3 +55,19 @@ def getFilesInDirectory(directory, validEnding, *additionalValidEndings, searchR
 # Filters out any files directly with in a ".tmp" directory.
 def filterTempFiles(filePaths: List[str]):
     return [filePath for filePath in filePaths if getIsolatedParentDir(filePath) != ".tmp"]
+
+# Returns the most appropriate .tmp directory for a path, creating it if necessary.
+def getTempDir(filePath: str):
+
+    # Remove any trailing path separators.
+    if filePath.endswith(os.sep): filePath = filePath[:-1]
+
+    # Get the nearest directory.
+    if not os.path.isdir(filePath): filePath = os.path.dirname(filePath)
+
+    # Make sure the directory is a .tmp directory, altering it if necessary.
+    if not filePath.endswith(".tmp"): filePath = os.path.join(filePath,".tmp")
+
+    # Check the new path and return it.
+    checkDirs(filePath)
+    return filePath
