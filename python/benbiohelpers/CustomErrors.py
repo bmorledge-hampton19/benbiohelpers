@@ -136,4 +136,4 @@ def checkForNumber(inputToCheck, enforceInt = False, validityCondition = None, v
     """
 
     from benbiohelpers.InputParsing.CheckForNumber import checkForNumber as IPCheckForNumber
-    IPCheckForNumber(inputToCheck, enforceInt, validityCondition, validityText)
+    return IPCheckForNumber(inputToCheck, enforceInt, validityCondition, validityText)
