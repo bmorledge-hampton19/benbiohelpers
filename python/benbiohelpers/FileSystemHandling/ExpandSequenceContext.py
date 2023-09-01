@@ -10,7 +10,7 @@ from benbiohelpers.CustomErrors import UserInputError
 
 
 def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansionNum, writeColumn = None, 
-                          outputFilePathSuffix = "_expanded", customOutputDirectory = None):
+                          outputFilePathSuffix = "_expanded", customOutputDirectory = None, verbose = True):
     """
     This function does all the legwork! 
     expansionNum represents the number of bases to expand by on each side.
@@ -20,7 +20,7 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
     expandedFilePaths = list()
     for inputBedFilePath in inputBedFilePaths:
 
-        print(f"\nWorking in {os.path.basename(inputBedFilePath)}")
+        if verbose: print(f"\nWorking in {os.path.basename(inputBedFilePath)}")
 
         # Generate file paths for the analysis.
         workingDirectory = os.path.dirname(inputBedFilePath)
@@ -40,7 +40,7 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
         with open(intermediateExpansionFilePath,'w') as intermediateExpansionFile:
             with open(inputBedFilePath, 'r') as inputBedFile:
 
-                print("Writing expanded indicies to intermediate bed file...")
+                if verbose: print("Writing expanded indicies to intermediate bed file...")
                 for line in inputBedFile:
 
                     # Get a list of all the arguments for a single entry in the bed file.
@@ -59,11 +59,11 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
                                 "extends into invalid positions.  Skipping.")
 
         # Create the fasta file from the intermediate expansion file.
-        print("Generating fasta file from expanded bed file...")
+        if verbose: print("Generating fasta file from expanded bed file...")
         bedToFasta(intermediateExpansionFilePath, genomeFilePath, intermediateFastaFilePath)
 
         # Open the un-expanded bed file and the expanded fasta reads that will be combined to create the expanded context.
-        print("Using fasta file to write expanded context to new bed file...")
+        if verbose: print("Using fasta file to write expanded context to new bed file...")
         with open(inputBedFilePath, 'r') as inputBedFile:
             with open(intermediateFastaFilePath, 'r') as fastaReadsFile:
                 with open(expandedOutputFilePath, 'w') as expandedOutputFile:
