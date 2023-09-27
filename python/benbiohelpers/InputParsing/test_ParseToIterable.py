@@ -14,8 +14,11 @@ def test_FAIL_invalid_range_step():
 def test_FAIL_0_step():
     with pytest.raises(UserInputError): parseToIterable("1-5$0")
 
+def test_FAIL_multiple_range_characters():
+    with pytest.raises(UserInputError): parseToIterable("1-5-2")
+
 def test_FAIL_invalid_cast():
-    with pytest.raises(UserInputError): iterable = parseToIterable("Hello, world", castType = int)
+    with pytest.raises(UserInputError): parseToIterable("Hello, world", castType = int)
 
 
 def test_default_sep_char():
@@ -49,6 +52,12 @@ def test_int_range_positive_step():
 
 def test_int_range_negative_step():
     assert parseToIterable("3:1$-2", rangeChar = ':') == range(3,0,-2) # Negative step
+
+def test_multiple_int_range():
+    assert parseToIterable("3-5,10-20$2") == [3,4,5,10,12,14,16,18,20]
+
+def test_int_range_with_trailing_nothing():
+    assert parseToIterable("1-3,") == range(1,4)
 
 def test_float_range_default_step():
     assert parseToIterable("3.5-5.5") == [3.5, 4.5, 5.5] # Default step

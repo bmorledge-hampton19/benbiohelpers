@@ -14,51 +14,61 @@ def parseToIterable(input: str, sepChar = ',', rangeChar = '-', stepChar = '$', 
     NOTE: Leading and trailing whitespace and whitespace adjacent to the above characters is removed from final output
     """
 
-    # Remove trailing and leading whitespace
-    input = input.strip()
+    outputList = list()
 
-    # If there are separator characters in the input, split it into multiple inputs,
-    # and recursively perform this function on each, concatenating the results into a single list.
-    if sepChar in input:
-        return([
-            item for inputIterable in input.split(sepChar)
-                 for item in parseToIterable(inputIterable, sepChar, rangeChar, stepChar, castType)
-        ])
+    # Split the input into pieces using the separator character
+    for inputPiece in input.split(sepChar):
 
-    # If there is a range separator in the input (and no separator characters),
-    # parse the input to a range object (if possible), or a list of numbers if not.
-    elif rangeChar is not None and rangeChar in input:
-        start, stop = (item.strip() for item in input.split(rangeChar, 1))
-        if stepChar in stop:
-            stop, step = (item.strip() for item in stop.split(stepChar, 1))
-        else: step = 1
+        # Remove trailing and leading whitespace
+        inputPiece = inputPiece.strip()
 
-        try: float(start)
-        except: raise UserInputError("Range start cannot be cast to a numeric value. Did you mean to set rangeChar to None?")
-        try: float(stop)
-        except: raise UserInputError("Range stop cannot be cast to a numeric value. Did you mean to set rangeChar to None?")
-        try: float(step)
-        except: raise UserInputError("Range step cannot be cast to a numeric value. Did you mean to set rangeChar to None?")
+        # If there is a range character in the current inputPiece (and no separator characters),
+        # parse it to a range object (if possible), or a list of numbers if not.
+        if rangeChar is not None and rangeChar in inputPiece:
+            start, stop = (item.strip() for item in inputPiece.split(rangeChar, 1))
+            if stepChar in stop:
+                stop, step = (item.strip() for item in stop.split(stepChar, 1))
+            else: step = 1
 
-        if float(step) == 0: raise UserInputError("Step of 0 given.")
-        if float(stop) < float(start) and float(step) > 0: 
-            warnings.warn(f"Stop is less than start in range {input} and step value is positive.  Range will contain no values.")
-        if float(stop) > float(start) and float(step) < 0: 
-            warnings.warn(f"Start is less than stop in range {input} and step value is negative.  Range will contain no values.")
+            try: float(start)
+            except: raise UserInputError(f"Range start \"{start}\" cannot be cast to a numeric value. "
+                                        "Did you mean to set rangeChar to None?")
+            try: float(stop)
+            except: raise UserInputError(f"Range stop \"{stop}\" cannot be cast to a numeric value. "
+                                        "Did you mean to set rangeChar to None?")
+            try: float(step)
+            except: raise UserInputError(f"Range step \"{step}\" cannot be cast to a numeric value. "
+                                        "Did you mean to set rangeChar to None?")
 
-        try:
-            if int(step) > 0: thisRange = range(int(start),int(stop)+1,int(step))
-            else: thisRange = range(int(start),int(stop)-1,int(step))
-        except: thisRange = [float(start)+i*float(step) for i in range(int((float(stop)-float(start)) / float(step) + 1))]
+            if float(step) == 0: raise UserInputError("Step of 0 given.")
+            if float(stop) < float(start) and float(step) > 0: 
+                warnings.warn(f"Stop is less than start in range {input} and step value is positive. "
+                            "Range will contain no values.")
+            if float(stop) > float(start) and float(step) < 0: 
+                warnings.warn(f"Start is less than stop in range {input} and step value is negative. "
+                            "Range will contain no values.")
 
-        return thisRange
+            try:
+                if int(step) > 0: outputList.append(range(int(start),int(stop)+1,int(step)))
+                else: outputList.append(range(int(start),int(stop)-1,int(step)))
+            except: outputList += [float(start)+i*float(step) for i in range(int((float(stop)-float(start)) / float(step) + 1))]
 
 
-    # Otherwise, the input is a single item that just needs to be turned into an iterable and returned.
-    # (Unless of course it's empty, in which case an empty list should be returned.)
+        # Otherwise, the inputPiece is a single item (unless of course it's empty)
+        elif inputPiece:
+            if castType is None or castType is str: outputList.append(inputPiece)
+            else: 
+                try: outputList.append(castType(inputPiece))
+                except: raise UserInputError(f"Input: {inputPiece} cannot be cast to desired type: {castType}.")
+
+    # If the output list contains exactly 1 item and it is a range, return just that range. (It's more efficient!)
+    if len(outputList) == 1 and type(outputList[0]) is range:
+        return outputList[0]
+
+    # Otherwise, we need to unpack all range items or the output list can't be iterated through properly.
     else:
-        if not input: return([])
-        elif castType is None or castType is str: return([input])
-        else: 
-            try: return([castType(input)])
-            except: raise UserInputError(f"Input: {input} cannot be cast to desired type: {castType}.")
+        unpackedOutputList = list()
+        for item in outputList:
+            if type(item) is range: unpackedOutputList += [num for num in item]
+            else: unpackedOutputList.append(item)
+        return unpackedOutputList
