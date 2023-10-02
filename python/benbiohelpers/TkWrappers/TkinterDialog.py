@@ -441,8 +441,14 @@ class TkinterDialog(tk.Frame):
         self.generateSelections()
 
         # Open the file to save selections to.
-        selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
-                                                self.root.title+".txt")
+        import platform
+        if platform.system() == "Linux":
+            selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
+                                                    self.root.title+".txt")
+        elif platform.system() == "Windows":
+            selectionStorageFilePath = os.path.join(os.getenv("APPDATA"), ".benbiohelpers", "tkinter_selection_storage",
+                                                    self.root.title+".txt")
+        else: raise ValueError("Uh-oh! Ben didn't plan for this OS...")
         checkDirs(os.path.dirname(selectionStorageFilePath))
         with open(selectionStorageFilePath, 'w') as selectionStorageFile: self.saveSelections(selectionStorageFile)
 
@@ -452,8 +458,14 @@ class TkinterDialog(tk.Frame):
     def beginRestore(self):
         "This function is invoked when the \"Restore Selections\" button is pressed."
 
-        selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
-                                                self.root.title+".txt")
+        import platform
+        if platform.system() == "Linux":
+            selectionStorageFilePath = os.path.join(os.getenv("HOME"), ".benbiohelpers", "tkinter_selection_storage",
+                                                    self.root.title+".txt")
+        elif platform.system() == "Windows":
+            selectionStorageFilePath = os.path.join(os.getenv("APPDATA"), ".benbiohelpers", "tkinter_selection_storage",
+                                                    self.root.title+".txt")
+        else: raise ValueError("Uh-oh! Ben didn't plan for this OS...")
         if not os.path.exists(selectionStorageFilePath): raise NoSavedSelectionsError
         with open(selectionStorageFilePath, 'r') as selectionStorageFile:
             try: self.restoreSelections(selectionStorageFile)
@@ -518,7 +530,7 @@ class TkinterDialog(tk.Frame):
 
         for multipleFileSelector in self.multipleFileSelectors:
             selectionStorageFile.write('\t'*nestingLevel)
-            selectionStorageFile.write(f"File_Path_Group:{':'.join(multipleFileSelector.getPaths())}\n")
+            selectionStorageFile.write(f"File_Path_Group:{'::'.join(multipleFileSelector.getPaths())}\n")
 
         for plainTextEntry in self.plainTextEntries:
             selectionStorageFile.write('\t'*nestingLevel)
@@ -562,38 +574,38 @@ class TkinterDialog(tk.Frame):
         count = 0
         while line.startswith("Individual_File_Path"):
             self.individualFileEntries[count][0].delete(0, tk.END)
-            self.individualFileEntries[count][0].insert(0, line.split(':')[1])
+            self.individualFileEntries[count][0].insert(0, line.split(':',1)[1])
             line = selectionsStorageFile.readline().strip(); count += 1
 
         count = 0
         while line.startswith("File_Path_Group"):
             self.multipleFileSelectors[count].clearPathDisplays()
-            for filePath in line.split(':')[1:]:
+            for filePath in line.split(':',1)[1].split('::'):
                 self.multipleFileSelectors[count].addPathDisplay(filePath)
             line = selectionsStorageFile.readline().strip(); count += 1
             
         count = 0
         while line.startswith("Plain_Text_Entry"):
             self.plainTextEntries[count].delete(0, tk.END)
-            self.plainTextEntries[count].insert(0, line.split(':')[1])
+            self.plainTextEntries[count].insert(0, line.split(':',1)[1])
             line = selectionsStorageFile.readline().strip(); count += 1
 
         count = 0
         while line.startswith("Toggle_State"):
-            self.checkboxVars[count].set(line.split(':')[1] == "True")
+            self.checkboxVars[count].set(line.split(':',1)[1] == "True")
             line = selectionsStorageFile.readline().strip(); count += 1
 
         count = 0
         while line.startswith("Dropdown_Selection"):
-            self.dropdownVars[count].set(line.split(':')[1])
+            self.dropdownVars[count].set(line.split(':',1)[1])
             line = selectionsStorageFile.readline().strip(); count += 1
 
         count = 0
         while line.startswith("Start_Dynamic"):
             if line.startswith("Start_Dynamic_StringVar_Selector"):
-                self.dynamicSelectors[count].setControllerVar(line.split(':')[1])
+                self.dynamicSelectors[count].setControllerVar(line.split(':',1)[1])
             elif line.startswith("Start_Dynamic_BooleanVar_Selector"):
-                self.dynamicSelectors[count].setControllerVar(line.split(':')[1] == "True")
+                self.dynamicSelectors[count].setControllerVar(line.split(':',1)[1] == "True")
             self.dynamicSelectors[count].checkController()
             self.dynamicSelectors[count].getCurrentDisplay().restoreSelections(selectionsStorageFile)
             line = selectionsStorageFile.readline().strip(); count += 1
