@@ -272,11 +272,13 @@ class RelativePosODS(OutputDataStratifier):
     """
 
     def __init__(self, ambiguityHandling, outputDataDictionaries,
-                 encompassingFeature: EncompassingData, centerRelativePos, extraRangeRadius, outputName):
+                 encompassingFeature: EncompassingData, centerRelativePos, extraRangeRadius, outputName, strandSpecificPos):
         """
         Uses the size of the given encompassing feature to set up the given layer of the output data structure using the range of values encompassed.
         If centerRelativePos is true, the "0" position in the dictionary is the middle of the range, rounded up.
         extraRangeRadius adds 2*[value] positions to the given range. 
+        If strandSpecificPos is true, positions take into account strandedness, so
+        positions encompassed by features on the '-' strand have their sign flipped.
         NOTE: I'm pretty sure that the way this initialization works, it expects that ALL encompassing features will have the same
         size. This may need to be updated in the future with a parameter that allows for dynamic expansion of relative position values via the
         attemptAddKey function.
@@ -285,6 +287,7 @@ class RelativePosODS(OutputDataStratifier):
 
         # Set important class variables
         self.centerRelativePos = centerRelativePos
+        self.strandSpecificPos = strandSpecificPos
         self.relativePosIntPositions = list()
         self.relativePosHalfPositions = list()
         self.usedIntPosition = False
@@ -331,6 +334,7 @@ class RelativePosODS(OutputDataStratifier):
             relativePosition = encompassedFeature.position - encompassingFeature.center
         else:
             relativePosition = encompassedFeature.position - encompassingFeature.startPos
+        if self.strandSpecificPos and encompassingFeature.strand == '-': relativePosition *= -1
 
         encompassedFeature.updateStratifierData(type(self), relativePosition)
 

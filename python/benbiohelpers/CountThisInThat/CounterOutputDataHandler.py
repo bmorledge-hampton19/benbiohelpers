@@ -88,12 +88,13 @@ class CounterOutputDataHandler:
 
 
     def addRelativePositionStratifier(self, encompassingFeature: EncompassingData, centerRelativePos = True, 
-                                      extraRangeRadius = 0, outputName = "Relative_Pos", positionAmbiguityHandling = AmbiguityHandling.tolerate):
+                                      extraRangeRadius = 0, outputName = "Relative_Pos", positionAmbiguityHandling = AmbiguityHandling.tolerate,
+                                      strandSpecificPos = False):
         """
         Adds a layer onto the output data structure to stratify by the position of the encompassed data with the encompassing data.
         """
         self.addNewStratifier(RelativePosODS(positionAmbiguityHandling, self.getNewStratificationLevelDictionaries(),
-                                                         encompassingFeature, centerRelativePos, extraRangeRadius, outputName))
+                                                         encompassingFeature, centerRelativePos, extraRangeRadius, outputName, strandSpecificPos))
 
 
     def addFeatureFractionStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, outputName = "Feature_Fraction", 
