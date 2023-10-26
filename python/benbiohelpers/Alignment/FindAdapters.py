@@ -17,7 +17,7 @@ def getFastqEntrySequence(fastqFile: TextIO):
     return sequence
 
 
-def findAdapters(fastqFilePaths: List[str], adapterFilePath, threshold = 0.05, defaultToMax = True, aggregateOutput = False):
+def findAdapters(fastqFilePaths: List[str], adapterFilePath, threshold = 0.01, defaultToMax = True, aggregateOutput = False):
     """
     Given one or more fastq files (in a list) and a fasta file of adapter sequences,
     determines which adapters are enriched in each file (using a subset of that file)
