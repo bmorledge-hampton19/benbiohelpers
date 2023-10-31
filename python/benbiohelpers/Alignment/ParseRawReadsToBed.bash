@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script utilizes trimmomatic, bowtie2, samtools, and bedtools to create a bed file from a fastq file (alongside other key inputs).
+# This script utilizes bbduk (or trimmomatic), bowtie2, samtools, and bedtools to create a bed file from a fastq file (alongside other key inputs).
 # See the FindAdapters script for a more detailed explanation of these parameters.
 
 # Get trimmomatic's jar path.
@@ -9,6 +9,7 @@ inputReads2=""
 adapterFile="NONE"
 retainSamOutput=false
 interleavedPEInput=false
+legacyTrimming=false
 
 while [[ $# > 0 ]]; do
   case $1 in
@@ -58,6 +59,10 @@ while [[ $# > 0 ]]; do
       ;;
     --interleaved)
       interleavedPEInput=true
+      shift
+      ;;
+    --legacy-trimming)
+      legacyTrimming=true
       shift
       ;;
     -*|--*)
@@ -113,6 +118,7 @@ then
 else
     echo "Working with $inputReads1 and $inputReads2"
 fi
+echo
 
 # Create the names of all other intermediate and output files.
 trimmedFastq="$tmpDirectory/${dataName}_trimmed.fastq.gz"
@@ -123,6 +129,7 @@ else
     bowtieSAMOutput="$tmpDirectory/$dataName.sam"
 fi
 bowtieStatsOutput="$tmpDirectory/${dataName}_bowtie2_stats.txt"
+trimmingStatsOutput="$tmpDirectory/${dataName}_trimming_stats.txt"
 BAMOutput="$tmpDirectory/$dataName.bam.gz"
 bedOutput="$dataDirectory/$dataName.bed"
 
@@ -137,16 +144,40 @@ if [[ $adapterFile != "NONE" ]]
 then
     if [[ -z "$inputReads2" ]]
     then
-    if [ "$interleavedPEInput" = true ]
+        if [[ "$legacyTrimming" == true ]]
         then
-            echo "Warning: trimmomatic cannot perform paired end trimming on interleaved files."
+            if [[ "$interleavedPEInput" == true ]]
+            then
+                echo "Warning: trimmomatic cannot perform paired end trimming on interleaved files. Trimming in single-end mode."
+            fi
+            echo "Trimming adapters using trimmomatic..."
+            java -jar $trimmomaticPath SE -threads $threads $inputReads1 $trimmedFastq "ILLUMINACLIP:$adapterFile:2:30:10" |& \
+            tail -2 | head -1 | tee $trimmingStatsOutput
+        else
+            if [[ "$interleavedPEInput" == true ]]
+            then
+                echo "Trimming adapters using bbduk..."
+                bbduk.sh in=$inputReads1 out=$trimmedFastq ref=$adapterFile ktrim=r k=23 mink=16 hdist=2 threads=$threads tpe tbo |& \
+                tail -9 | head -5 | tee $trimmingStatsOutput
+            else
+                echo "Trimming adapters using bbduk..."
+                bbduk.sh in=$inputReads1 out=$trimmedFastq ref=$adapterFile ktrim=r k=23 mink=16 hdist=2 threads=$threads |& \
+                tail -8 | head -4 | tee $trimmingStatsOutput
+            fi
         fi
-        echo "Trimming adapters in single-end mode..."
-        java -jar $trimmomaticPath SE -threads $threads $inputReads1 $trimmedFastq "ILLUMINACLIP:$adapterFile:2:30:10"
     else
-        echo "Trimming adapters in paired-end mode..."
-        java -jar $trimmomaticPath PE -threads $threads $inputReads1 $inputReads2 \
-        -baseout $trimmedFastq "ILLUMINACLIP:$adapterFile:2:30:10"
+        if [[ "$legacyTrimming" == true ]]
+        then
+            echo "Trimming adapters using trimmomatic..."
+            java -jar $trimmomaticPath PE -threads $threads $inputReads1 $inputReads2 \
+            -baseout $trimmedFastq "ILLUMINACLIP:$adapterFile:2:30:10" |& \
+            tail -2 | head -1 | tee $trimmingStatsOutput
+        else
+            echo "Trimming adapters using bbduk..."
+            bbduk.sh in=$inputReads1 in2=$inputReads2 out=$trimmedFastqP1 out2=$trimmedFastqP2 \
+            ref=$adapterFile ktrim=r k=23 mink=16 hdist=2 threads=$threads tpe tbo |& \
+            tail -9 | head -5 | tee $trimmingStatsOutput
+        fi
     fi
 
 else
@@ -161,10 +192,11 @@ else
 fi
 
 # Align the reads to the genome.
+echo
 echo "Aligning reads with bowtie2..."
 if [[ -z "$inputReads2" ]]
 then
-    if [ "$interleavedPEInput" = true ]
+    if [[ "$interleavedPEInput" == true ]]
     then
         if [[ -z "$customBowtie2Arguments" ]]
         then
@@ -194,6 +226,8 @@ else
         -p $threads $customBowtie2Arguments |& tail -20 | tee $bowtieStatsOutput
     fi
 fi
+
+echo
 
 # If the sam file is the endpoint, exit here.
 if [[ $pipelineEndpoint == ".sam" ]]

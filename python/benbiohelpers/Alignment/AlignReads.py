@@ -9,7 +9,8 @@ from typing import List
 
 # Write metadata on the parameters for the alignment, for future reference.
 def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenamePath,
-                  adapterSequencesFilePath = None, bowtie2Version = None, customBowtie2Arguments = None):
+                  adapterSequencesFilePath = None, bowtie2Version = None, customBowtie2Arguments = None,
+                  trimmer = None):
 
     if pairedEndAlignment: basename = os.path.basename(rawReadsFilePath).rsplit('_', 1)[0]
     else: basename = os.path.basename(rawReadsFilePath).rsplit(".fastq", 1)[0]
@@ -21,7 +22,17 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenam
 
         metadataFile.write("Path_to_Index:\n" + bowtie2IndexBasenamePath + "\n\n")
         if adapterSequencesFilePath is not None:
+
             metadataFile.write("Path_to_Adapter_Sequences:\n" + adapterSequencesFilePath + "\n\n")
+        if trimmer is not None:
+            metadataFile.write("Trimmer:\n" + trimmer + "\n\n")
+            metadataFile.write("Trimming_Stats:\n")
+            trimmingStatsFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".tmp",f"{basename}_trimming_stats.txt")
+            with open(trimmingStatsFilePath, 'r') as trimmingStatsFile:
+                for line in trimmingStatsFile: metadataFile.write(line)
+            metadataFile.write('\n')
+            os.remove(trimmingStatsFilePath)
+
         metadataFile.write("Bowtie2_Version:\n" + bowtie2Version + "\n")
         metadataFile.write("Bowtie2_Stats:\n")
         bowtie2StatsFilePath = os.path.join(os.path.dirname(rawReadsFilePath),".tmp",f"{basename}_bowtie2_stats.txt")
@@ -39,9 +50,9 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenam
 
 # For each of the given reads files, run the accompyaning bash script to perform the alignment.
 def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSequencesFilePath = None, 
-                    readCountsOutputFilePath = None, bowtie2BinaryPath = None, threads = 1, customBowtie2Arguments = '',
-                    findAdapters = False, pairedEndAlignment = False, interleavedPairedEndFiles = False,
-                    pipelineEndpoint = ".bed", retainSamOutput = False):
+               readCountsOutputFilePath = None, bowtie2BinaryPath = None, threads = 1, customBowtie2Arguments = '',
+               findAdapters = False, pairedEndAlignment = False, interleavedPairedEndFiles = False,
+               pipelineEndpoint = ".bed", retainSamOutput = False, legacyTrimming = False):
 
     # Get the bash alignment script file path.
     alignmentBashScriptFilePath = os.path.join(os.path.dirname(__file__),"ParseRawReadsToBed.bash")
@@ -126,6 +137,11 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         if thisAdapterSequencesFilePath is not None: arguments += ["-a", thisAdapterSequencesFilePath]
         if bowtie2BinaryPath is not None: arguments += ["-b", bowtie2BinaryPath]
         if retainSamOutput: arguments += ["-s"]
+        if legacyTrimming:
+            arguments += ["--legacy-trimming"]
+            trimmer = "trimmomatic"
+        else:
+            trimmer = "bbduk"
         subprocess.run(arguments, check = True)
 
         # If requested, count the number of reads in the original input file(s).
@@ -152,7 +168,8 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
 
         # Write the metadata.
         writeMetadata(rawReadsFilePath, pairedEndAlignment, bowtie2IndexBasenamePath, 
-                      thisAdapterSequencesFilePath, bowtie2BinaryPath, customBowtie2Arguments)
+                      thisAdapterSequencesFilePath, bowtie2BinaryPath, customBowtie2Arguments,
+                      trimmer)
 
         # Add the output file path to the list
         if pairedEndAlignment: readsBasePath = read1FilePaths[i].rsplit(".fastq", 1)[0].rsplit('_', 1)[0]
@@ -235,6 +252,8 @@ def main():
                 pipelineEndpointDS.initDisplay(".bed", ".bed").createCheckbox("Retain sam file in main directory", 0, 0)
                 pipelineEndpointDS.initDisplay(".bed.gz", ".bed.gz").createCheckbox("Retain sam file in main directory", 0, 0)
 
+            additionalOptionsDialog.createCheckbox("Use legacy (trimmomatic) trimming", 4, 0)
+
     # Get the raw reads files, but make sure that no trimmed reads files have tagged along!
     unfilteredRawReadsFilePaths = dialog.selections.getFilePathGroups()[0]
     filteredRawReadsFilePaths = removeTrimmedAndTmp(unfilteredRawReadsFilePaths)
@@ -288,9 +307,14 @@ def main():
         pipelineEndpoint = ".bed"
         retainSamOutput = False
 
+    if additionalOptions.getControllerVar() == "Use":
+        legacyTrimming = dialog.selections.getToggleStates("AddOps")[0]
+    else:
+        legacyTrimming = False
+
     alignReads(filteredRawReadsFilePaths, bowtie2IndexBasenamePath, adapterSequencesFilePath, readCountsOutputFilePath,
                bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment, interleavedPairedEndFiles,
-               pipelineEndpoint, retainSamOutput)
+               pipelineEndpoint, retainSamOutput, legacyTrimming)
 
 
 if __name__ == "__main__": main()
