@@ -4,7 +4,6 @@ from benbiohelpers.DataPipelineManagement.GenomeManager import getGenomeFastaFil
 
 with TkinterDialog() as genomeTestDialog: genomeTestDialog.createGenomeSelector(0, 0)
 
-genome = genomeTestDialog.selections.getGenomes()[0]
-print(f"genome")
-print(getGenomeFastaFilePath(genome))
-print(getIndexPathPrefix(genome))
+print(genomeTestDialog.selections.getGenomes()[0])
+print(genomeTestDialog.selections.getGenomes(returnType = "fasta")[0])
+print(genomeTestDialog.selections.getGenomes(returnType="btindex")[0])

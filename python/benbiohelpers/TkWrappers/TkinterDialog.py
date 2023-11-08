@@ -4,13 +4,13 @@ import tkinter as tk
 import tkinter.font as tkFont
 import os
 from tkinter import filedialog, messagebox
-from typing import List, Dict, Tuple, TextIO
+from typing import List, Dict, Tuple, TextIO, Literal
 from benbiohelpers.TkWrappers.MultipleFileSelector import MultipleFileSelector
 from benbiohelpers.TkWrappers.DynamicSelector import DynamicSelector
 from benbiohelpers.CustomErrors import NonexistantPathError
 from benbiohelpers.TkWrappers.MyTkErrors import *
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
-from benbiohelpers.DataPipelineManagement.GenomeManager import getGenomes, addGenome
+from benbiohelpers.DataPipelineManagement.GenomeManager import getGenomes, addGenome, getGenomeFastaFilePath, getIndexPathPrefix
 
 
 class TkinterDialog(tk.Frame):
@@ -705,8 +705,11 @@ class Selections:
     def getDropdownSelections(self, ID = "Root") -> List[str]:
         return self.selectionSets[ID][4]
 
-    def getGenomes(self, ID = "Root") -> List[str]:
-        return self.selectionSets[ID][5]
+    def getGenomes(self, ID = "Root", returnType: Literal["alias", "fasta", "btindex"] = "alias") -> List[str]:
+        if returnType.lower() == "alias": return self.selectionSets[ID][5]
+        elif returnType.lower() == "fasta": return [getGenomeFastaFilePath(genome) for genome in self.selectionSets[ID][5]]
+        elif returnType.lower() == "btindex": return [getIndexPathPrefix(genome) for genome in self.selectionSets[ID][5]]
+        else: raise ValueError(f"Inappropriate returnType: {returnType} given. Expected \"alias\", \"fasta\", or \"btindex\"")
 
 
     def addSelections(self, newSelections):
