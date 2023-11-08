@@ -10,6 +10,7 @@ from benbiohelpers.TkWrappers.DynamicSelector import DynamicSelector
 from benbiohelpers.CustomErrors import NonexistantPathError
 from benbiohelpers.TkWrappers.MyTkErrors import *
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
+from benbiohelpers.DataPipelineManagement.GenomeManager import getGenomes, addGenome
 
 
 class TkinterDialog(tk.Frame):
@@ -109,6 +110,7 @@ class TkinterDialog(tk.Frame):
                                             # file selections and also a boolean value telling whether or not they are for new files.
         self.plainTextEntries: List[tk.Entry] = list() # A list of entry objects from createTextField
         self.dropdownVars: List[tk.StringVar] = list() # A list of stringVars associated with dropdowns
+        self.genomeSelectors: List[DynamicSelector] = list() # A list of genome selectors
         self.checkboxVars: List[tk.BooleanVar] = list() # A list of intVars associated with checkboxes
         self.multipleFileSelectors: List[MultipleFileSelector] = list() # A list of MultipleFileSelectors, which contain a list of filePaths.
         self.dynamicSelectors: List[DynamicSelector] = list() # A list of DynamicSelector objects, which contain TkinterDialog objects of their own.
@@ -277,6 +279,27 @@ class TkinterDialog(tk.Frame):
         # Initialize the dropdown.
         dropdown = tk.OptionMenu(dropdownFrame, dropdownStringVar,*options)
         dropdown.grid(row = 0, column = 1, pady = 5, padx = 5)
+
+
+    def createGenomeSelector(self, row, column, labelText = "Reference Genome:", columnSpan = 1):
+        "Create a dropdown menu for selecting a genome."
+        
+        options = list(getGenomes().keys())
+        options.sort()
+        options.append("New Genome")
+
+        with self.createDynamicSelector(row, column, columnSpan) as genomeSelector:
+            self.genomeSelectors.append(genomeSelector)
+            genomeSelector.initDropdownController(labelText, options)
+            newGenomeDisplay = genomeSelector.initDisplay("New Genome", "NewGenome")
+            newGenomeDisplay.createFileSelector("GenomeFastaFile", 0, ("Fasta File", ".fa"))
+            with newGenomeDisplay.createDynamicSelector(1, 0, 2) as aliasDynSel:
+                aliasDynSel.initCheckboxController("Give custom alias")
+                aliasDynSel.initDisplay(1, "CustomAlias").createTextField("Custom Alias", 0, 0, defaultText="My_Genome")
+            with newGenomeDisplay.createDynamicSelector(2, 0, 2) as indexDynSel:
+                indexDynSel.initCheckboxController("Give custom bowtie2 index path")
+                indexDynSel.initDisplay(1, "CustomIndex").createFileSelector("Bowtie2 Index File (Any):", 1,
+                                                                            ("Bowtie2 Index File", ".bt2"))
 
     
     def createCheckbox(self, text, row, column, columnSpan = 1):
@@ -480,6 +503,7 @@ class TkinterDialog(tk.Frame):
         textEntries = list()
         toggleStates = list() # A list of the states of the toggles in the dialog
         dropdownSelections = list() # A list of the selections from dropdown menus
+        genomes = list() # A list of the genomes selected by the user.
 
         # Get all the different Selections-relevant variables from this dialog object
         if self.ID is not None:
@@ -502,22 +526,35 @@ class TkinterDialog(tk.Frame):
             for stringVar in self.dropdownVars:
                 dropdownSelections.append(stringVar.get())
 
+            # Handling genomes is a little trickier, because we may be adding a new genome.
+            for genomeSelector in self.genomeSelectors:
+                if genomeSelector.getControllerVar() == "New Genome":
+                    newGenomeSelections = genomeSelector.getCurrentDisplay().generateSelections()
+                    genomeFastaFilePath = newGenomeSelections.getIndividualFilePaths("NewGenome")[0]
+                    if "CustomAlias" in newGenomeSelections.selectionSets: alias = newGenomeSelections.getTextEntries("CustomAlias")[0]
+                    else: alias = None
+                    if "CustomIndex" in newGenomeSelections.selectionSets: indexPath = newGenomeSelections.getIndividualFilePaths("CustomIndex")[0]
+                    else: indexPath = None
+                    genomes.append(addGenome(genomeFastaFilePath, alias, indexPath))
+                else: genomes.append(genomeSelector.getControllerVar())
+
             # Generate the Selections object from the above variables.
             self.selections = Selections(self.ID,individualFilePaths,filePathGroups, 
-                                         textEntries, toggleStates,dropdownSelections)
+                                         textEntries,toggleStates,dropdownSelections, genomes)
         
         # Generate a blank selections object if the ID is NoneType,
         else: self.selections = Selections(None)
 
-        # Add any Selections objects from any dialogs included in dynamic displays
+        # Add any Selections objects from any dialogs included in dynamic displays (excluding those in genome selectors, which were already handled)
         for dynamicSelector in self.dynamicSelectors:
-            dynamicSelector.getCurrentDisplay().generateSelections()
-            self.selections.addSelections(dynamicSelector.getCurrentDisplay().selections)      
+            if dynamicSelector in self.genomeSelectors: continue
+            self.selections.addSelections(dynamicSelector.getCurrentDisplay().generateSelections())      
 
         # Add any Selections objects from sub-dialogs
         for subDialog in self.subDialogs:
-            subDialog.generateSelections()
-            self.selections.addSelections(subDialog.selections)
+            self.selections.addSelections(subDialog.generateSelections())
+
+        return self.selections
 
 
     def saveSelections(self, selectionStorageFile: TextIO, nestingLevel = 0):
@@ -623,7 +660,8 @@ class Selections:
     "A data structure to hold the results from the TkinterDialog"
 
     def __init__(self, ID, individualFilePaths = None, filePathGroups = None, 
-                 textEntries = None, toggleStates = None, dropdownSelections = None):
+                 textEntries = None, toggleStates = None, dropdownSelections = None,
+                 genomes = None):
 
         # This is a dictionary for storing a list of input values as lists themselves.  (See key below)
         self.selectionSets: Dict[str, List[List]] = dict()
@@ -645,6 +683,7 @@ class Selections:
             self.selectionSets[ID].append(textEntries)
             self.selectionSets[ID].append(toggleStates)
             self.selectionSets[ID].append(dropdownSelections)
+            self.selectionSets[ID].append(genomes)
 
 
     # DEPRECATED: diverts to getIndividualFilePaths
@@ -665,6 +704,9 @@ class Selections:
 
     def getDropdownSelections(self, ID = "Root") -> List[str]:
         return self.selectionSets[ID][4]
+
+    def getGenomes(self, ID = "Root") -> List[str]:
+        return self.selectionSets[ID][5]
 
 
     def addSelections(self, newSelections):
