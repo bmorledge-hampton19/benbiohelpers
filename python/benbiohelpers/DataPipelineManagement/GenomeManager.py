@@ -102,7 +102,7 @@ def getIndexPathPrefix(genomeName):
 
 def addGenome(genomeFastaFilePath: str, alias = None, indexPath: str = None):
     """
-    Add the given genome fasta file to xrlesionfinder's genome manager file.
+    Add the given genome fasta file to the genome manager file.
     If no alias (the colloquial name for the genome) is given, it is generated from the fasta file's name.
     Returns the alias.
     """
