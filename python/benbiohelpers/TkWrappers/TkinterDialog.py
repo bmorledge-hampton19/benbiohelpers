@@ -618,7 +618,7 @@ class TkinterDialog(tk.Frame):
         while line.startswith("File_Path_Group"):
             self.multipleFileSelectors[count].clearPathDisplays()
             for filePath in line.split(':',1)[1].split('::'):
-                self.multipleFileSelectors[count].addPathDisplay(filePath)
+                if filePath: self.multipleFileSelectors[count].addPathDisplay(filePath)
             line = selectionsStorageFile.readline().strip(); count += 1
             
         count = 0
