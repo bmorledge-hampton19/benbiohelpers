@@ -14,7 +14,7 @@ def cleanDataDirectory(directory):
         if os.path.isdir(path) and item == ".tmp":
             for itemToDelete in os.listdir(path):
                 pathToDelete = os.path.join(path,itemToDelete)
-                if os.path.isdir(pathToDelete): os.rmdir(pathToDelete)
+                if os.path.isdir(pathToDelete): shutil.rmtree(pathToDelete)
                 else: os.remove(pathToDelete)
                 itemsRemoved += 1
 
