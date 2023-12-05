@@ -206,7 +206,7 @@ def main():
         dialog.createMultipleFileSelector("Raw fastq reads:", 0, ".fastq.gz",
                                         ("Fastq Files", (".fastq.gz", ".fastq")), ("fastq Files", ".fastq"),
                                         additionalFileEndings=[".fastq"])
-        dialog.createFileSelector("Bowtie2 Index File (Any):", 1, ("Bowtie2 Index File", ".bt2"))
+        dialog.createGenomeSelector(1, 0)
 
         with dialog.createDynamicSelector(2, 0) as endModeDS:
             endModeDS.initDropdownController("Alignment method:", ("Single-end", "Paired-end"))
@@ -258,9 +258,7 @@ def main():
     unfilteredRawReadsFilePaths = dialog.selections.getFilePathGroups()[0]
     filteredRawReadsFilePaths = removeTrimmedAndTmp(unfilteredRawReadsFilePaths)
 
-    bowtie2IndexBasenamePath: str = dialog.selections.getIndividualFilePaths()[0]
-    bowtie2IndexBasenamePath = bowtie2IndexBasenamePath.rsplit('.', 2)[0]
-    if bowtie2IndexBasenamePath.endswith(".rev"): bowtie2IndexBasenamePath = bowtie2IndexBasenamePath.rsplit('.', 1)[0]
+    bowtie2IndexBasenamePath = dialog.selections.getGenomes(returnType = "btindex")[0]
 
     interleavedPairedEndFiles = False
     if endModeDS.currentDisplayKey == "Paired-end":
