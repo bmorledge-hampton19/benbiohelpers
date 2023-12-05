@@ -1,8 +1,8 @@
-import os, subprocess, time, re
+import os, subprocess, time
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs, getIsolatedParentDir
 from benbiohelpers.CustomErrors import InvalidPathError, UserInputError
-from benbiohelpers.Alignment.FindAdapters import findAdapters as findAdaptersFunc
+from benbiohelpers.Alignment.FindAdapters import findAdapters as findAdaptersFunc, NoEnrichedAdapterError
 from benbiohelpers.InputParsing.CheckForNumber import checkForNumber
 from typing import List
 
@@ -52,7 +52,7 @@ def writeMetadata(rawReadsFilePath: str, pairedEndAlignment, bowtie2IndexBasenam
 def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSequencesFilePath = None, 
                readCountsOutputFilePath = None, bowtie2BinaryPath = None, threads = 1, customBowtie2Arguments = '',
                findAdapters = False, pairedEndAlignment = False, interleavedPairedEndFiles = False,
-               pipelineEndpoint = ".bed", retainSamOutput = False, legacyTrimming = False):
+               pipelineEndpoint = ".bed", retainSamOutput = False, legacyTrimming = False, findAdaptersSearchLengthLimit = None):
 
     # Get the bash alignment script file path.
     alignmentBashScriptFilePath = os.path.join(os.path.dirname(__file__),"ParseRawReadsToBed.bash")
@@ -115,12 +115,19 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         print('(',currentReadFileNum,'/',totalReadsFiles,')', sep = '') 
 
         # If requested find adapters in the current fastq file(s) based on the given list of adapters.
-        if findAdapters and not pairedEndAlignment:
-            thisAdapterSequencesFilePath = findAdaptersFunc([rawReadsFilePath], adapterSequencesFilePath)[0]
-        elif findAdapters and pairedEndAlignment:
-            thisAdapterSequencesFilePath = findAdaptersFunc([read1FilePaths[i], read2FilePaths[i]],
-                                                            adapterSequencesFilePath, aggregateOutput = True)[0]
-        else: thisAdapterSequencesFilePath = adapterSequencesFilePath
+        try:
+            if findAdapters and not pairedEndAlignment:
+                thisAdapterSequencesFilePath = findAdaptersFunc([rawReadsFilePath], adapterSequencesFilePath,
+                                                                searchLengthLimit = findAdaptersSearchLengthLimit)[0]
+            elif findAdapters and pairedEndAlignment:
+                thisAdapterSequencesFilePath = findAdaptersFunc([read1FilePaths[i], read2FilePaths[i]],
+                                                                adapterSequencesFilePath, aggregateOutput = True,
+                                                                searchLengthLimit = findAdaptersSearchLengthLimit)[0]
+            else: thisAdapterSequencesFilePath = adapterSequencesFilePath
+        except NoEnrichedAdapterError:
+            print("WARNING: None of the given adapters are enriched. Reads will not be trimmed. "
+                  "(If you believe you have the right sequences, consider using a sequence search limit.)")
+            thisAdapterSequencesFilePath = None
 
         # Make sure the .tmp directory exists and create a path to the bowtie2 stats file.
         tempDir = os.path.join(os.path.dirname(rawReadsFilePath),".tmp")
@@ -167,6 +174,12 @@ def alignReads(rawReadsFilePaths: List[str], bowtie2IndexBasenamePath, adapterSe
         print(f"Total time spent aligning across all files: {time.time() - scriptStartTime} seconds")
 
         # Write the metadata.
+        if thisAdapterSequencesFilePath is not None:
+            if legacyTrimming:
+                trimmer = "trimmomatic"
+            else:
+                trimmer = "bbduk"
+        else: trimmer = None
         writeMetadata(rawReadsFilePath, pairedEndAlignment, bowtie2IndexBasenamePath, 
                       thisAdapterSequencesFilePath, bowtie2BinaryPath, customBowtie2Arguments,
                       trimmer)
@@ -221,6 +234,9 @@ def main():
             adapterSequencesSelector.createFileSelector("Custom Adapters Sequences File:", 0, ("Fasta Files", ".fa"))
             adapterSequencesSelector = adapterSequencesDS.initDisplay("Find Adapters", selectionsID = "potentialAdapterSequences")
             adapterSequencesSelector.createFileSelector("Potential Adapter Sequences File:", 0, ("Fasta Files", ".fa"))
+            with adapterSequencesSelector.createDynamicSelector(1, 0) as searchLengthLimitDS:
+                searchLengthLimitDS.initCheckboxController("Limit search length")
+                searchLengthLimitDS.initDisplay(True, "searchLengthLimit").createTextField("Search length limit:", 0, 0, defaultText = "42")
 
         dialog.createTextField("How many Threads should be used?", 4, 0, defaultText="1")
 
@@ -267,6 +283,7 @@ def main():
     else: pairedEndAlignment = False
 
     findAdapters = False
+    searchLengthLimit = None
     if adapterSequencesDS.getControllerVar() == "XR-seq Adapters":
         adapterSequencesFilePath = os.path.join(os.path.dirname(__file__), "XR-seq_primers.fa")
     elif adapterSequencesDS.getControllerVar() == "Custom":
@@ -274,6 +291,9 @@ def main():
     elif adapterSequencesDS.getControllerVar() == "Find Adapters":
         adapterSequencesFilePath = dialog.selections.getIndividualFilePaths("potentialAdapterSequences")[0]
         findAdapters = True
+        if searchLengthLimitDS.getControllerVar():
+            searchLengthLimit = checkForNumber(dialog.selections.getTextEntries("searchLengthLimit")[0], True,
+                                               lambda x:x>0, "Expected a positive-integer search length limit")
     else: adapterSequencesFilePath = None
 
     threads = checkForNumber(dialog.selections.getTextEntries()[0], True, lambda x:x>0, "Expected a positive-integer number of threads")
@@ -312,7 +332,7 @@ def main():
 
     alignReads(filteredRawReadsFilePaths, bowtie2IndexBasenamePath, adapterSequencesFilePath, readCountsOutputFilePath,
                bowtie2BinaryPath, threads, customBowtie2Arguments, findAdapters, pairedEndAlignment, interleavedPairedEndFiles,
-               pipelineEndpoint, retainSamOutput, legacyTrimming)
+               pipelineEndpoint, retainSamOutput, legacyTrimming, searchLengthLimit)
 
 
 if __name__ == "__main__": main()
