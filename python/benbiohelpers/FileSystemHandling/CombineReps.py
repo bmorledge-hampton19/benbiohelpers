@@ -12,6 +12,8 @@ def combineReps(parentDirectory, expectedRepetitions, repetitionStringBase = "re
 
     firstRepString = f"{repetitionStringBase}1"
 
+    combinedRepetitionsFilePaths = list()
+
     # Iterate through the given directory
     for item in os.listdir(parentDirectory):
         path = os.path.join(parentDirectory,item)
@@ -49,6 +51,9 @@ def combineReps(parentDirectory, expectedRepetitions, repetitionStringBase = "re
                 for repetitionFilePath in repetitionFilePaths:
                     with openFunction(repetitionFilePath, 'r') as repetitionFile:
                         shutil.copyfileobj(repetitionFile, combinedRepetitionsFile)
+            combinedRepetitionsFilePaths.append(combinedRepetitionsFilePath)
+    
+    return combinedRepetitionsFilePaths
 
 
 def main():
