@@ -12,6 +12,8 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
     The numericCols parameter describes which of those columns are expected to be sorted numerically.
     """
 
+    noDupsFilePaths = list()
+
     for inputFilePath in inputFilePaths:
 
         print("\nWorking in",os.path.basename(inputFilePath))
@@ -62,6 +64,8 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
                     else: rowsRemoved += 1
 
         print("Removed", rowsRemoved, "rows.")
+
+    return noDupsFilePaths
 
 
 def main():
