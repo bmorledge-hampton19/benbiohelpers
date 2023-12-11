@@ -5,7 +5,7 @@ from benbiohelpers.InputParsing.ParseToIterable import parseToIterable
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 
 
-def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSorting = True, numericCols = [1,2]):
+def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSorting = True, numericCols = [1,2], verbose = True):
     """
     Removes duplicates on a sorted input file by comparing consecutive rows.
     The keyColumns parameter should be a list containing the column indices (0-based) used to determine whether two rows are duplicates.
@@ -16,11 +16,11 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
 
     for inputFilePath in inputFilePaths:
 
-        print("\nWorking in",os.path.basename(inputFilePath))
+        if verbose: print("\nWorking in",os.path.basename(inputFilePath))
 
         if checkSorting:
 
-            print("Checking for proper sorting...")
+            if verbose: print("Checking for proper sorting...")
 
             args = ["sort"]
             for colIndex in keyColumns:
@@ -42,9 +42,10 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
 
         # Create a file to output results to.
         noDupsFilePath = inputFilePath.rsplit('.',1)[0] + "_no_dups.bed"
+        noDupsFilePaths.append(noDupsFilePath)
 
         # Iterate through the sorted reads file, writing each line to the new file but omitting any duplicate entries beyond the first.
-        print("Removing duplicates...")
+        if verbose: print("Removing duplicates...")
         with open(inputFilePath, 'r') as inputFile:
             with open(noDupsFilePath, 'w') as noDupsFile:
 
@@ -63,7 +64,7 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
 
                     else: rowsRemoved += 1
 
-        print("Removed", rowsRemoved, "rows.")
+        if verbose: print("Removed", rowsRemoved, "rows.")
 
     return noDupsFilePaths
 
