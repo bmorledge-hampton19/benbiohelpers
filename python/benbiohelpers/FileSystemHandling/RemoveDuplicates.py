@@ -5,7 +5,7 @@ from benbiohelpers.InputParsing.ParseToIterable import parseToIterable
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 
 
-def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSorting = True, numericCols = [1,2], verbose = True):
+def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSorting = True, numericCols = [1,2], metadataFilePath = None, verbose = True):
     """
     Removes duplicates on a sorted input file by comparing consecutive rows.
     The keyColumns parameter should be a list containing the column indices (0-based) used to determine whether two rows are duplicates.
@@ -38,7 +38,12 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
                                          f"these columns sorted numerically: {numericCols}")
 
         # Keep track of how many duplicate rows are found and removed.
-        rowsRemoved = 0
+        totalRowsRemoved = 0
+
+        # Set up the necessary variables to record metadata if requested.
+        if metadataFilePath is not None:
+            metadataFile = open(metadataFilePath, 'w')
+            currentKeyDuplicates = 0
 
         # Create a file to output results to.
         noDupsFilePath = inputFilePath.rsplit('.',1)[0] + "_no_dups.bed"
@@ -58,13 +63,24 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
                     # Write this read only if it does not match the previous read.
                     if lastRowKey is None or lastRowKey != thisRowKey:
 
+                        if metadataFilePath is not None and currentKeyDuplicates > 0:
+                            metadataFile.write('\t'.join(lastRowKey) + f"\t{currentKeyDuplicates}\n")
+                            currentKeyDuplicates = 0
+
                         noDupsFile.write(line)
 
                         lastRowKey = thisRowKey
 
-                    else: rowsRemoved += 1
+                    else:
+                        
+                        currentKeyDuplicates += 1
+                        totalRowsRemoved += 1
 
-        if verbose: print("Removed", rowsRemoved, "rows.")
+        if verbose: print("Removed", totalRowsRemoved, "rows.")
+
+        if metadataFilePath is not None:
+            if currentKeyDuplicates > 0: metadataFile.write('\t'.join(lastRowKey) + f"\t{currentKeyDuplicates}\n")
+            metadataFile.close()
 
     return noDupsFilePaths
 
@@ -79,14 +95,20 @@ def main():
         with dialog.createDynamicSelector(2, 0) as checkSortDS:
             checkSortDS.initCheckboxController("Check sorting")
             checkSortDS.initDisplay(True, "checkSort").createTextField("Numeric sort columns:", 0, 0, defaultText = "1, 2")
+        with dialog.createDynamicSelector(3, 0) as metadataPathDS:
+            metadataPathDS.initCheckboxController("Output metadata")
+            metadataPathDS.initDisplay(True, "metadataPath").createFileSelector("Metadata file", 0, ("Tab separated values file", ".tsv"),
+                                                                                newFile = True)
 
     inputFilePaths = dialog.selections.getFilePathGroups()[0]
     keyColumns = parseToIterable(dialog.selections.getTextEntries()[0], castType = int)
     checkSorting = checkSortDS.getControllerVar()
     if checkSorting: numericCols = parseToIterable(dialog.selections.getTextEntries("checkSort")[0], castType = int)
     else: numericCols = list()
+    if not metadataPathDS.getControllerVar(): metadataFilePath = None
+    else: metadataFilePath = dialog.selections.getIndividualFilePaths("metadataPath")[0]
 
-    removeDuplicates(inputFilePaths, keyColumns, checkSorting, numericCols)
+    removeDuplicates(inputFilePaths, keyColumns, checkSorting, numericCols, metadataFilePath)
 
 
 if __name__ == "__main__": main()
