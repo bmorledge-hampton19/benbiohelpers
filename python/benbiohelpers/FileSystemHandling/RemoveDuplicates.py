@@ -73,7 +73,7 @@ def removeDuplicates(inputFilePaths: List[str], keyColumns = [0,1,2,5], checkSor
 
                     else:
                         
-                        currentKeyDuplicates += 1
+                        if metadataFilePath is not None: currentKeyDuplicates += 1
                         totalRowsRemoved += 1
 
         if verbose: print("Removed", totalRowsRemoved, "rows.")
