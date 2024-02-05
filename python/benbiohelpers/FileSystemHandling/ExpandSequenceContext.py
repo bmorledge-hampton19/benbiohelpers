@@ -3,7 +3,7 @@
 import os
 from typing import List
 from benbiohelpers.FileSystemHandling.BedToFasta import bedToFasta
-from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs
+from benbiohelpers.FileSystemHandling.DirectoryHandling import checkDirs, getTempDir
 from benbiohelpers.FileSystemHandling.FastaFileIterator import FastaFileIterator
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.CustomErrors import UserInputError
@@ -24,11 +24,9 @@ def expandSequenceContext(inputBedFilePaths: List[str], genomeFilePath, expansio
 
         # Generate file paths for the analysis.
         workingDirectory = os.path.dirname(inputBedFilePath)
-        intermediateFilesDir = os.path.join(workingDirectory, "intermediate_files")
-        checkDirs(intermediateFilesDir)
 
         inputBedFileBasename = os.path.basename(inputBedFilePath).rsplit('.', 1)[0]
-        intermediateExpansionFilePath = os.path.join(intermediateFilesDir, inputBedFileBasename + "_intermediate_expansion.bed")
+        intermediateExpansionFilePath = os.path.join(getTempDir(workingDirectory), inputBedFileBasename + "_intermediate_expansion.bed")
         intermediateFastaFilePath = intermediateExpansionFilePath.rsplit('.',1)[0] + ".fa"
 
         if customOutputDirectory is None: outputDirectory = workingDirectory
@@ -102,7 +100,7 @@ def main():
     # Get information from the user on what files should be expanded and how.
     with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Expand Sequence Context") as dialog:
         dialog.createMultipleFileSelector("Unexpanded Bed Files:", 0, ".bed", ("Bed Files",".bed"))
-        dialog.createFileSelector("Genome File:", 1, ("Fasta Files",".fa"))
+        dialog.createGenomeSelector(1, 0)
         dialog.createTextField("Nucleotides to expand by:", 2, 0, defaultText = "3")
         with dialog.createDynamicSelector(3, 0) as writeColDynSel:
             writeColDynSel.initDropdownController("Write Column:", options = ["Append", "Replace"])
@@ -116,7 +114,7 @@ def main():
     selections = dialog.selections
 
     inputBedFilePaths = selections.getFilePathGroups()[0]
-    genomeFilePath = selections.getIndividualFilePaths()[0]
+    genomeFilePath = selections.getGenomes(returnType = "fasta")[0]
     try: expansionNum = int(selections.getTextEntries()[0])
     except ValueError: raise UserInputError(f"Expansion number: {selections.getTextEntries()[0]} cannot be coerced to an integer")
     if writeColDynSel.getControllerVar() == "Append": writeColumn = None
