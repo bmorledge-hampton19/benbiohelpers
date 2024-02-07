@@ -26,3 +26,17 @@ def checkForNumber(inputToCheck, enforceInt = False, validityCondition = None, v
         raise InvalidNumericInput(numericInput, validityText)
 
     return numericInput
+
+
+# These are some nifty wrapper functions which cover some common use cases for checkForNumber.
+def checkForPositiveInteger(inputToCheck, validityText = "Expected positive integer."):
+    """
+    A checkForNumber wrapper function that enforces that the number must be a positive integer.
+    """
+    return checkForNumber(inputToCheck, True, lambda n: n > 0, validityText)
+
+def checkForNonNegativeInteger(inputToCheck, validityText = "Expected non-negative integer."):
+    """
+    A checkForNumber wrapper function that enforces that the number must be a non-negative integer.
+    """
+    return checkForNumber(inputToCheck, True, lambda n: n >= 0, validityText)
