@@ -164,18 +164,18 @@ class BlacklistFilterer:
         is beyond the current blacklisted region, until they both have been read completely.
         """
 
-        # Read through the files incrementally.
-        while self.currentBlacklistedRegion is not None or self.currentFeature is not None:
+        # Read through the files incrementally until we run out of blacklisted regions.
+        while self.currentBlacklistedRegion is not None:
             while (
                 self.currentFeature is not None
-                and (
-                    self.currentBlacklistedRegion is None
-                    or 
-                    not self.isFeatureBeyondBlacklistedRegion(self.currentFeature, self.currentBlacklistedRegion)
-                )
+                and 
+                not self.isFeatureBeyondBlacklistedRegion(self.currentFeature, self.currentBlacklistedRegion)
             ):
                 self.getNextFeature()
             self.getNextBlacklistedRegion()
+
+        # Make sure we read through any remaining features.
+        while self.currentFeature is not None: self.getNextFeature()
 
         # Run the final check. 
         self.onNewBlacklistRegion(finalCheck=True)
@@ -193,6 +193,8 @@ def removeBlacklistedRegions(unfilteredFilePaths: List[str], blacklistedRegionsF
     filteredFilePaths = list()
 
     for unfilteredFilePath in unfilteredFilePaths:
+
+        print(f"\nWorking with {os.path.basename(unfilteredFilePath)}")
 
         filteredFilePath = (unfilteredFilePath.rsplit('.',1)[0] + "_" +
                             os.path.basename(blacklistedRegionsFilePath.rsplit('.',1)[0]) + "_filtered.bed")
