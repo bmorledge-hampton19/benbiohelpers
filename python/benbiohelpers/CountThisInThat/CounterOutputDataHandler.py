@@ -169,7 +169,7 @@ class CounterOutputDataHandler:
 
     def createOutputDataWriter(self, outputFilePath: str, oDSSubs: List = None, 
                                customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False,
-                               omitFinalStratificationCounts = False):
+                               omitFinalStratificationCounts = False, writeHeadersImmediately = False):
         """
         Pretty self explanatory.  See the __init__ method for OutputDataWriter for more info.
 
@@ -185,7 +185,8 @@ class CounterOutputDataHandler:
         self.writer = OutputDataWriter(self.outputDataStructure, self.outputDataStratifiers, outputFilePath,
                                        oDSSubs = oDSSubs, customStratifyingNames = customStratifyingNames,
                                        getCountDerivatives = getCountDerivatives, omitZeroRows = omitZeroRows,
-                                       omitFinalStratificationCounts = omitFinalStratificationCounts)
+                                       omitFinalStratificationCounts = omitFinalStratificationCounts,
+                                       writeHeadersImmediately = writeHeadersImmediately)
 
         if self.encompassedFeaturesToWrite is not None or self.encompassingFeaturesToWrite is not None:
             assert isinstance(self.outputDataStratifiers[0], (EncompassedFeatureODS, EncompassingFeatureODS)), (
@@ -362,7 +363,7 @@ class OutputDataWriter():
 
     def __init__(self, outputDataStructure, outputDataStratifiers, outputFilePath: str,
                     oDSSubs: List = None, customStratifyingNames = None, getCountDerivatives = None, omitZeroRows = False,
-                    omitFinalStratificationCounts = False):
+                    omitFinalStratificationCounts = False, writeHeadersImmediately = False):
         """
         Set up the OutputDataWriter by providing access to the output data stratifiers and the underlying dictionaries as well as by
         giving an output file path and the two optional arguments described below.
@@ -386,9 +387,12 @@ class OutputDataWriter():
 
         The omitZeroRows flag, if set to true, ensures that only rows with at least one count are written.
 
-        The omitFinalStratificationCounts, if true, ignores any counts in the final layer of stratification. (This is
+        The omitFinalStratificationCounts flag, if true, ignores any counts in the final layer of stratification. (This is
         most useful when you just want to record encompassment, and don't actually care how often it occurs.) Note that
         count derivatives are still calculated and displayed.
+
+        The writeHeadersImmediately flag, if true, writes the headers at the end of the constructor.
+        (This is useful when writing incrementally to a non-bed file, as the headers get skipped otherwise.)
         """
 
         self.outputDataStructure = outputDataStructure
@@ -422,6 +426,7 @@ class OutputDataWriter():
         # NOTE: If the final data stratifier establishes keys dynamically, (i.e. new keys are discovered during the counting process)
         #       these headers may be incorrect later on.
         self.headers = self.getHeaders()
+        if writeHeadersImmediately: self.outputFile.write('\t'.join(self.headers) + '\n')
 
 
     def __del__(self):
