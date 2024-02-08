@@ -141,6 +141,9 @@ class ThisInThatCounter(ABC):
 
         # Keep track of the previous encompassing feature for when we check confirmed encompassed features.
         self.previousEncompassingFeature = self.currentEncompassingFeature
+        
+        # After the first pass, make sure to send all exiting encompassing features to the output data handler.
+        if self.previousEncompassingFeature is not None: self.outputDataHandler.onExitEncompassingFeature(self.previousEncompassingFeature)
 
         # Read in the next line.
         nextLine = self.encompassingFeaturesFile.readline()
@@ -159,7 +162,7 @@ class ThisInThatCounter(ABC):
                 or self.previousEncompassingFeature.chromosome != self.currentEncompassingFeature.chromosome):
                 if not self.suppressOutput: print("Counting in",self.currentEncompassingFeature.chromosome)
 
-        # Check confirmed encompasssed features against the new encompassing feature.  (Unless this is the first encompassing feature)
+        # Check confirmed encompasssed features against the current and previous encompassing features.  (Unless this is the first encompassing feature)
         if self.previousEncompassingFeature is not None: self.checkConfirmedEncompassedFeatures()
 
 
@@ -274,13 +277,15 @@ class ThisInThatCounter(ABC):
         # Otherwise, check them against the range of the newest encompassing feature.
         else: self.confirmedEncompassedFeatures = [feature for feature in self.confirmedEncompassedFeatures if not self.isExitingEncompassment(feature)]
 
+        # Tell the output data handler to write the current set of features if incremental writing is requested.
+        # NOTE: It's important that this happens before reprocessing of remaining encompassed features with the current encompassing feature, as this can
+        #       cause the current encompassing feature to get flagged for writing and removal.
+        if self.writeIncrementally != 0: self.outputDataHandler.writeWaitingFeatures()
+
         # Next, reprocess all remaining features, provided they are not ahead of the encompassing feature's range.
         for feature in self.confirmedEncompassedFeatures:
             if self.isEncompassedFeatureWithinEncompassingFeature(feature):
                 self.outputDataHandler.onEncompassedFeatureInEncompassingFeature(feature, self.currentEncompassingFeature, False)
-
-        # Tell the output data handler to write the current set of features if incremental writing is requested.
-        if self.writeIncrementally != 0: self.outputDataHandler.writeWaitingFeatures()
 
 
     def count(self):

@@ -249,13 +249,20 @@ class CounterOutputDataHandler:
 
     def onNewEncompassingFeature(self, encompassingFeature: EncompassingData):
         """
-        If the Output Data Handler is set up to track all encompassing data, do it here.
+        If the Output Data Handler is tracking all encompassing data, pass it to the output data stratifiers here.
         """
 
         if self.trackAllEncompassing:
             for outputDataStratifier in self.outputDataStratifiers: 
                 outputDataStratifier.onNewEncompassingFeature(encompassingFeature)
-            if self.encompassingFeaturesToWrite is not None: self.encompassingFeaturesToWrite.add(encompassingFeature)
+
+
+    def onExitEncompassingFeature(self, encompassingFeature: EncompassingData):
+        """
+        If the Output Data Handler is tracking all encompassing data, and we are writing incrementally, make sure this feature gets written.
+        """
+
+        if self.trackAllEncompassing and self.encompassingFeaturesToWrite is not None: self.encompassingFeaturesToWrite.add(encompassingFeature)
 
 
     def countFeature(self, encompassedFeature, encompassingFeature, countValue = 1):
