@@ -304,20 +304,17 @@ class RelativePosODS(OutputDataStratifier):
         else:
             outputDataRange = range(outputDataRangeLength)
         
+        # Create the list of relative positions that should be used.
+        if outputDataRangeLength % 2 == 0 and centerRelativePos:
+            self.relativePosHalfPositions.append(outputDataRange.start - 0.5)
+        for i in outputDataRange:
+            self.relativePosIntPositions.append(i)
+            if (outputDataRangeLength % 2 == 0 and centerRelativePos) or i != outputDataRange.stop - 1: self.relativePosHalfPositions.append(i+0.5)
+
         # Set up this stratification level of the output data structure.
-        for z,dictionary in enumerate(self.outputDataDictionaries):
-
-            if outputDataRangeLength % 2 == 0 and centerRelativePos:
-                dictionary[outputDataRange.start - 0.5] = 0
-
-            for i in outputDataRange:
-
-                dictionary[i] = 0
-                if z == 0: self.relativePosIntPositions.append(i)
-
-                if (outputDataRangeLength % 2 == 0 and centerRelativePos) or i != outputDataRange.stop - 1:
-                    dictionary[i+0.5] = 0
-                    if z == 0: self.relativePosHalfPositions.append(i+0.5)
+        for dictionary in self.outputDataDictionaries:
+            for position in self.relativePosIntPositions+self.relativePosHalfPositions:
+                dictionary[position] = 0
 
         self.allKeys.update(self.relativePosIntPositions + self.relativePosHalfPositions)
 
