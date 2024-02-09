@@ -2,6 +2,8 @@
 # I decided not to use the usual CountThisInThat paradigm because it actually treats encompassed features
 # that span regions as the midpoint of that region. Thus, it wouldn't detect overlaps properly for 
 # features that span regions of different sizes (e.g., genes).
+# NOTE: Sorted ouptut is not guaranteed because features are sorted by start position first but are confirmed
+#       when blacklisted regions pass beyond their end position.
 
 import os, subprocess
 from typing import List
