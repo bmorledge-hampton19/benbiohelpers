@@ -10,3 +10,6 @@ defaultTextScaling = plotnine.theme(plot_title = plotnine.element_text(size = 26
 # Blank background theme
 blankBackground = plotnine.theme(panel_grid_major = plotnine.element_blank(), panel_grid_minor = plotnine.element_blank(),
                                  panel_background = plotnine.element_blank(), axis_line = plotnine.element_line(color = "black"))
+
+# Used in the "expand" parameter for scale_y_continuous to make data flush with x-axis.
+flushXAxis = (0, 0, 0.1, 0)
