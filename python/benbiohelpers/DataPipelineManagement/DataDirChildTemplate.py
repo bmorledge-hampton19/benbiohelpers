@@ -29,3 +29,12 @@ class TESTDataDir(DataDir):
         """
 
         return os.path.join(dataDirectoryDirectory,"TEST_data")
+    
+
+    @staticmethod
+    def _getPackageName():
+        """
+        Returns the name of the package, which will be used in the tkinter dialog prompting the user to create the data directory.
+        """
+
+        return "TEST"

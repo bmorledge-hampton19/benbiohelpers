@@ -15,7 +15,7 @@ class DataDir(ABC):
     @abstractmethod
     def _getPackageDirectory():
         """
-        The first of the two abstract methods defined by the DataDir class.
+        The first of the three abstract methods defined by the DataDir class.
         This one should return a path to the package directory to be used by the child of the DataDir class. It should also ensure that directory exists.
         This directory will be used to store the text file that will contain the path to the data directory so that its location is static and reliable.
         It will also be used as the default location for the directory selection GUI.
@@ -27,8 +27,19 @@ class DataDir(ABC):
     @abstractmethod
     def _getDataDirectoryPath(dataDirectoryDirectory):
         """
-        The second of the two abstract methods defined by the DataDir class.
+        The second of the three abstract methods defined by the DataDir class.
         This one should return a path to the data directory given its parent directory.
+
+        See DataDirChildTemplate.py for an example implementation.
+        """
+
+
+    @staticmethod
+    @abstractmethod
+    def _getPackageName():
+        """
+        The final abstract method defined by the DataDir class.
+        This one is easy. Simply return the name of the package, which will be used in the tkinter dialog prompting the user to create the data directory.
 
         See DataDirChildTemplate.py for an example implementation.
         """
@@ -103,7 +114,7 @@ class DataDir(ABC):
             from _tkinter import TclError
             try:
                 dialog = TkinterDialog(workingDirectory = dataDirChild._getPackageDirectory(), title = "Data Directory Selection")
-                dialog.createFileSelector("Location to create new data directory:",0,("Fasta Files",".fa"), directory = True)
+                dialog.createFileSelector(f"Location to create {dataDirChild._getPackageName()} data directory:",0,("Fasta Files",".fa"), directory = True)
 
                 # Run the UI
                 dialog.mainloop()
