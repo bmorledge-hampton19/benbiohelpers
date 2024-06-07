@@ -1,3 +1,82 @@
+python3-benbiohelpers (1.3.1-0ubuntu3) bionic; urgency=medium
+
+  * Concurrent release for bionic
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 06 Jun 2024 13:30:33 -0700
+
+python3-benbiohelpers (1.3.1-0ubuntu2) focal; urgency=medium
+
+  * Concurrent release for focal
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 06 Jun 2024 13:29:32 -0700
+
+python3-benbiohelpers (1.3.1-0ubuntu1) jammy; urgency=medium
+
+  * Clearer prompt for CLI data dir selection
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Thu, 06 Jun 2024 13:20:46 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu8) focal; urgency=medium
+
+  * Concurrent release for Focal
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 15:37:41 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu7) jammy; urgency=medium
+
+  * Increased minimum python version to accommodate plotnine, albeit an older version.
+    - It'll probably still break, but maybe it will break less?
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 15:31:59 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu6) bionic; urgency=medium
+
+  * Fixed author/email
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 15:21:34 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu5) bionic; urgency=medium
+
+  * Editing control file to fix build dependencies...
+
+ -- Kellie-Desktop <ben@Kellie-Desktop.>  Tue, 04 Jun 2024 13:39:50 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu4) bionic; urgency=medium
+
+  * Concurrent release for bionic
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 13:10:35 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu3) focal; urgency=medium
+
+  * Concurrent release for focal
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 13:04:39 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu2) jammy; urgency=medium
+
+  * Added sequence alignment dependencies to control file
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 12:47:02 -0700
+
+python3-benbiohelpers (1.3.0-0ubuntu1) jammy; urgency=low
+
+  * Ported over sequence alignment pipeline and made various improvements, including:
+    - Better metadata tracking
+    - Support for bbduk trimming
+    - Better support for paired end alignment
+    - Better handling of adapters, including the "find adapters" option
+    - More flexible output options
+  * Additional custom errors and input parsing
+  * More bugfixes for CountThisInThat in the endless battle to keep edge cases functional...
+  * Added a helper script for plotnine plotting
+  * Allowed tkinter dialogs to restore last set of inputs. Hooray!
+  * Created the GenomeManager module to keep track of genomes no matter where they are on the OS
+  * Created the DataDir abstract class to more easily maintain data directories for individual projects
+  * Ported over MassRename and RemoveDuplicates
+
+ -- Benjamin Morledge-Hampton <b.morledge-hampton@wsu.edu>  Tue, 04 Jun 2024 11:09:20 -0700
+
 python3-benbiohelpers (1.2.2-0ubuntu2) jammy; urgency=low
 
   * Initial release for jammy

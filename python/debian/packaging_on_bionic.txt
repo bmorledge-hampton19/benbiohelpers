@@ -1,0 +1,4 @@
+Change python version to >=3.6 (in control and setup.py)
+Change bbmap dependency to trimmomatic (in control)
+Change plotnine dependency to optional extra (using extras_require field in setup.py)
+Remove import of Literal from typing (and associated type hints) in TkWrappers.TkinterDialog.py

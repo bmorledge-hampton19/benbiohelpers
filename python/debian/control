@@ -4,9 +4,9 @@ Build-Depends: debhelper (>= 11.0.0),dh-python,python3-all,python3-setuptools
 Section: python
 Priority: optional
 Standards-Version: 3.9.6
-X-Python3-Version: >= 3.7
+X-Python3-Version: >= 3.8
 
 Package: python3-benbiohelpers
 Architecture: all
 Description: A collection of scripts for general use in bioinformatics projects.
-Depends: ${python3:Depends}, ${misc:Depends}, python3-tk
+Depends: ${python3:Depends}, ${misc:Depends}, python3-tk, bowtie2, bbmap, bedtools, samtools
