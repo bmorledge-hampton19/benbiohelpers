@@ -57,12 +57,12 @@ def main():
 
     #Create the Tkinter UI
     with TkinterDialog(workingDirectory=os.path.abspath(os.path.join(__file__,"..","..",".."))) as dialog:
-        dialog.createFileSelector("Parent Directory:", 0, directory = True)
-        dialog.createTextField("String to search for:", 1, 0, defaultText='')
-        dialog.createTextField("String to replace with:", 2, 0, defaultText='')
-        dialog.createCheckbox("Case insensitive:", 3, 0)
-        dialog.createCheckbox("Rename directories:", 4, 0)
-        dialog.createCheckbox("Verbose:", 5, 0)
+        dialog.createFileSelector("Parent Directory", 0, directory = True)
+        dialog.createTextField("String to search for", 1, 0, defaultText='')
+        dialog.createTextField("String to replace with", 2, 0, defaultText='')
+        dialog.createCheckbox("Case insensitive", 3, 0)
+        dialog.createCheckbox("Rename directories", 4, 0)
+        dialog.createCheckbox("Verbose", 5, 0)
 
     selections = dialog.selections
     massRename(selections.getIndividualFilePaths()[0], selections.getTextEntries()[0],
