@@ -53,9 +53,10 @@ def sRA_ToFastq(runAccessionIDsFilePath, getNamesFromCol2 = False, threads = 1):
                     gzippedFastqFiles.append(os.path.join(alignmentFilesDir, item+".gz"))
             print(f"Time to gzip files: {time.time() - gzipStartTime} seconds")
 
-            # Delete prefetched directory
-            print("\nDeleting prefetched directory...")
-            shutil.rmtree(os.path.join(alignmentFilesDir,runAccessionID))
+            # Delete prefetched directory (if it was created. For large files it may not be.)
+            if os.path.exists(os.path.join(alignmentFilesDir,runAccessionID)):
+                print("\nDeleting prefetched directory...")
+                shutil.rmtree(os.path.join(alignmentFilesDir,runAccessionID))
 
             print(f"**Total time so far: {time.time() - startTime} seconds**")
 
