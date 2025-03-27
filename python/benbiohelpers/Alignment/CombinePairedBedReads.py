@@ -19,6 +19,7 @@ def combinePairedBedReads(pairedBedReadsFilePaths: List[str], maxConcordantDista
     """
     Takes a list of bed files containing aligned reads and combines reads which align concordantly, as decided by the maxConcordantDistance parameter.
     Each bed file is assumed to contain information from both reads. (i.e., reads should not be split across multiple bed files.)
+    Note that unpaired reads (those with sequencing IDs not ending in /1 or /2) can also be passed through this function and will simply be written as they are.
     """
 
     pairedCombinedBedReadsFilePaths = list()
@@ -49,7 +50,7 @@ def combinePairedBedReads(pairedBedReadsFilePaths: List[str], maxConcordantDista
                 thisRead = line.split()
 
                 # Check if we have paired reads.
-                if thisRead[3][:-1] == lastRead[3][:-1]:
+                if thisRead[3][:-1] == lastRead[3][:-1] and thisRead[3][-2] == "/":
 
                     # Make sure the reads are given in order.
                     assert lastRead[3][-1] == "1"
