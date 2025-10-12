@@ -5,12 +5,15 @@ import os, gzip
 from typing import List
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.DNA_SequenceHandling import reverseCompliment
+from benbiohelpers.FileSystemHandling.DirectoryHandling import getMetadataDir
 
 strandFromIsReverseComplement = {True:'-', False:'+'}
 R1 = 0x40
 R2 = 0x80
+readEndToString = {R1:"R1", R2:"R2"}
 
-def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = None, verbose = False, processSpecificReads = []):
+def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = None,
+                       verbose = False, processSpecificReads = [], appendReadID = False):
     
     for samFilePath in samFilePaths:
 
@@ -30,10 +33,15 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
             openFunction = open
 
         outputBedFilePath = os.path.join(thisOutputDir, outputBedFileBasename)
-        metadataFilePath = outputBedFilePath.rsplit('.',1)[0] + ".metadata"
+        metadataFilePath = os.path.join(getMetadataDir(outputBedFilePath), outputBedFileBasename + ".metadata")
 
         # Read through the sam file line by line, looking for mismatches and recording them.
-        alignedReadsCounter = 0
+        totalReads = 0
+        readsWithInvalidAlignments = 0
+        readsWithInvalidEnd = 0
+        readsWithoutMismatches = 0
+        readsWithIndels = 0
+        outputReads = 0
         mismatchesCounter = 0
         with openFunction(samFilePath, "rt") as samFile:
             with open(outputBedFilePath, 'w') as outputBedFile:
@@ -44,14 +52,17 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
                         if verbose: print("Skipping header")
                         continue
 
+                    totalReads += 1
                     splitLine = line.split()
 
                     # Skip lines that shouldn't be processed.
                     if splitLine[2] == '*':
                         if verbose: print("Skipping unaligned read")
+                        readsWithInvalidAlignments += 1
                         continue
                     if splitLine[5] == '*':
                         if verbose: print("Skipping read without CIGAR string")
+                        readsWithInvalidAlignments += 1
                         continue
                     if processSpecificReads:
                         foundValidRead = False
@@ -59,10 +70,9 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
                             if int(splitLine[1]) & readFlag: foundValidRead = True
                         if not foundValidRead:
                             if verbose: print("Skipping read without valid read order flag")
+                            readsWithInvalidEnd += 1
                             continue
-
-                    # Increment the aligned reads counter
-                    alignedReadsCounter += 1
+                    
 
                     # Find the XM and MD fields and derive information about mismatches from them.
                     # For those reads that don't contain mismatches, skip them.
@@ -80,11 +90,13 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
 
                     if mismatchCount == 0:
                         if verbose: print("Skipping read with no mismatches")
+                        readsWithoutMismatches += 1
                         continue
 
                     # Get the cigar string and determine if the read should be skipped for the presence of indels.
                     cigarString = splitLine[5]
                     if omitIndels and ('I' in cigarString or 'D' in cigarString):
+                        readsWithIndels += 1
                         if verbose: print("Skipping read with indel")
                         continue
 
@@ -157,9 +169,19 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
 
                     if isReverseCompliment: readSequence = reverseCompliment(readSequence)
 
-                    outputBedFile.write('\t'.join((splitLine[2], str(int(splitLine[3]) - 1), str(int(splitLine[3]) - 1 + refSeqLength), 
-                                                   ':'.join(threePrimeMismatchPositions), ':'.join(mismatchSequences),
-                                                   strandFromIsReverseComplement[isReverseCompliment], readSequence)) + '\n')
+                    thisBedEntry = [splitLine[2], str(int(splitLine[3]) - 1), str(int(splitLine[3]) - 1 + refSeqLength), 
+                                    ':'.join(threePrimeMismatchPositions), ':'.join(mismatchSequences),
+                                    strandFromIsReverseComplement[isReverseCompliment], readSequence]
+
+                    if appendReadID:
+                        readID = splitLine[0]
+                        if int(splitLine[1]) & R1 and not int(splitLine[1]) & R2: readID += ":R1"
+                        elif int(splitLine[1]) & R2 and not int(splitLine[1]) & R1: readID += ":R2"
+                        thisBedEntry.append(readID)
+
+                    outputBedFile.write('\t'.join(thisBedEntry) + '\n')
+
+                    outputReads += 1
 
                     if verbose:
                         print(f"Byte flag: {splitLine[1]}")
@@ -175,8 +197,21 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
 
         # Write the metadata
         with open(metadataFilePath, 'w') as metadataFile:
-            metadataFile.write(f"Total_Aligned_Reads:\t{alignedReadsCounter}\n")
-            metadataFile.write(f"Mismatches:\t{mismatchesCounter}\n")
+            metadataFile.write(f"Total_Reads:\t{totalReads}\n")
+            metadataFile.write(f"Reads_With_Invalid_Alignment:\t{readsWithInvalidAlignments}\n")
+            if processSpecificReads:
+                metadataFile.write(f"Output_Specific_Read_End:\t{':'.join(readEndToString[readEnd] for readEnd in processSpecificReads)}\n")
+                metadataFile.write(f"Reads_Without_Specified_End:\t{readsWithInvalidEnd}\n")
+            else:
+                metadataFile.write("Output_Specific_Read_End:\tANY\n")
+            metadataFile.write(f"Reads_Without_Mismatches:\t{readsWithoutMismatches}\n")
+            if omitIndels:
+                metadataFile.write("Omit_Reads_With_Indels:\tTrue\n")
+                metadataFile.write(f"Reads_With_Indels:\t{readsWithIndels}\n")
+            else:
+                metadataFile.write("Omit_Reads_With_Indels:\tFalse\n")
+            metadataFile.write(f"Reads_In_Output:\t{outputReads}\n")
+            metadataFile.write(f"Mismatches_In_Output:\t{mismatchesCounter}\n")
 
 
 def main():
@@ -190,7 +225,8 @@ def main():
                 outputDirDynSel.initCheckboxController("Specify single output dir")
                 outputDirDialog = outputDirDynSel.initDisplay(True, "outputDir")
                 outputDirDialog.createFileSelector("Output Directory:", 0, directory = True)
-        dialog.createCheckbox("Verbose output", 4, 0)
+        dialog.createCheckbox("Append Read ID to bed entries", 4, 0)
+        dialog.createCheckbox("Verbose print statements (for debugging)", 5, 0)
 
     # If no input was received (i.e. the UI was terminated prematurely), then quit!
     if dialog.selections is None: quit()
@@ -208,7 +244,7 @@ def main():
         processSpecificReads.append(R2)
 
     samMismatchesToBed(selections.getFilePathGroups()[0], selections.getToggleStates()[0], outputDir,
-                       selections.getToggleStates()[1], processSpecificReads)
+                       selections.getToggleStates()[2], processSpecificReads, selections.getToggleStates()[1])
 
 
 if __name__ == "__main__": main()
