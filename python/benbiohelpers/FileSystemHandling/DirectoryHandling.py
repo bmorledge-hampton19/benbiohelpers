@@ -71,3 +71,18 @@ def getTempDir(filePath: str):
     # Check the new path and return it.
     checkDirs(filePath)
     return filePath
+
+def getMetadataDir(filePath: str):
+
+    # Remove any trailing path separators.
+    if filePath.endswith(os.sep): filePath = filePath[:-1]
+
+    # Get the nearest directory.
+    if not os.path.isdir(filePath): filePath = os.path.dirname(filePath)
+
+    # Make sure the directory is a .tmp directory, altering it if necessary.
+    if not filePath.endswith(".metadata"): filePath = os.path.join(filePath,".metadata")
+
+    # Check the new path and return it.
+    checkDirs(filePath)
+    return filePath
