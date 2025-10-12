@@ -35,7 +35,7 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
         outputBedFilePath = os.path.join(thisOutputDir, outputBedFileBasename)
         metadataFilePath = getMetadataFilePath(outputBedFilePath)
 
-        # Read through the sam file line by line, looking for mismatches and recording them.
+        # Prepare counter variables for metadata output
         totalReads = 0
         readsWithInvalidAlignments = 0
         readsWithInvalidEnd = 0
@@ -43,6 +43,8 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
         readsWithIndels = 0
         outputReads = 0
         mismatchesCounter = 0
+
+        # Read through the sam file line by line, looking for mismatches and recording them.
         with openFunction(samFilePath, "rt") as samFile:
             with open(outputBedFilePath, 'w') as outputBedFile:
                 for line in samFile:
