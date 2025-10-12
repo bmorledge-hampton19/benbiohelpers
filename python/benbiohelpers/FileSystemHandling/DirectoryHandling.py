@@ -80,9 +80,20 @@ def getMetadataDir(filePath: str):
     # Get the nearest directory.
     if not os.path.isdir(filePath): filePath = os.path.dirname(filePath)
 
-    # Make sure the directory is a .tmp directory, altering it if necessary.
+    # Make sure the directory is a .metadata directory, altering it if necessary.
     if not filePath.endswith(".metadata"): filePath = os.path.join(filePath,".metadata")
 
     # Check the new path and return it.
     checkDirs(filePath)
     return filePath
+
+def getMetadataFilePath(filePath: str):
+
+    # If a path to a directory was given, just return the nearest .metadata directory.
+    if os.path.isdir(filePath):
+        return getMetadataDir(filePath)
+    
+    # Otherwise, get the path to the relevant metadata file.
+    else:
+        if not filePath.endswith(".metadata"): filePath += ".metadata"
+        return os.path.join(getMetadataDir(filePath), os.path.basename(filePath))
