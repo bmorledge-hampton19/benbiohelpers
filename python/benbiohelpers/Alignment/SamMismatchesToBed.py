@@ -5,7 +5,7 @@ import os, gzip
 from typing import List
 from benbiohelpers.TkWrappers.TkinterDialog import TkinterDialog
 from benbiohelpers.DNA_SequenceHandling import reverseCompliment
-from benbiohelpers.FileSystemHandling.DirectoryHandling import getMetadataDir
+from benbiohelpers.FileSystemHandling.DirectoryHandling import getMetadataFilePath
 
 strandFromIsReverseComplement = {True:'-', False:'+'}
 R1 = 0x40
@@ -33,7 +33,7 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
             openFunction = open
 
         outputBedFilePath = os.path.join(thisOutputDir, outputBedFileBasename)
-        metadataFilePath = os.path.join(getMetadataDir(outputBedFilePath), outputBedFileBasename + ".metadata")
+        metadataFilePath = getMetadataFilePath(outputBedFilePath)
 
         # Read through the sam file line by line, looking for mismatches and recording them.
         totalReads = 0
