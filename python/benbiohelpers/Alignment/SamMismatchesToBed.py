@@ -218,7 +218,7 @@ def samMismatchesToBed(samFilePaths: List[str], omitIndels = True, outputDir = N
 
 def main():
     # Create the Tkinter dialog.
-    with TkinterDialog(workingDirectory=os.path.join(__file__,"..",".."), title = "Sam Mismatches to Bed") as dialog:
+    with TkinterDialog(workingDirectory = os.getenv("HOME"), title = "Sam Mismatches to Bed") as dialog:
         dialog.createMultipleFileSelector("Sam Read Files:",0,".sam.gz",("Sam Files",(".sam.gz",".sam")), 
                                         additionalFileEndings = [".sam"])
         dialog.createCheckbox("Omit reads with indels", 1, 0)
