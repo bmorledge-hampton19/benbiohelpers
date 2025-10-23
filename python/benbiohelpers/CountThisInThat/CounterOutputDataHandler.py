@@ -591,6 +591,18 @@ class OutputDataWriter():
         Writes the results of the output data structure to a given file.  (All at once)
         """
 
+        # Cache total counts (may be helpful in getCountDerivatives)
+        # NOTE: Can modify this function in getCountDerivatives to count only specific cases.
+        def getCounts(layer):
+            counts = 0
+            if type(layer) is not int:
+                for key in layer:
+                    counts += getCounts(layer[key])
+                return counts
+            else:
+                return layer
+        self.totalCounts = getCounts(self.outputDataStructure)
+
         # Account for the base case of just counting everything.
         if len(self.outputDataStratifiers) == 0: self.outputFile.write(str(self.outputDataStructure) + '\n')
 
