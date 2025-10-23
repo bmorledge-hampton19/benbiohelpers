@@ -14,7 +14,7 @@ class CounterOutputDataHandler:
     """
 
     def __init__(self, incrementalWriting, trackAllEncompassing = False, trackAllEncompassed = False, 
-                 countAllEncompassed = False, countNonCountedEncompassedAsNegative = False):
+                 countAllEncompassed = False, countNonCountedEncompassedAsNegative = False, countOnlyNonEncompassed = False):
         """
         Initialize the object by setting default values
         The incrementalWriting parameter flags either encompassed or encompassing features (or None) to be written incrementally.
@@ -27,10 +27,13 @@ class CounterOutputDataHandler:
         self.trackAllEncompassing = trackAllEncompassing
         self.trackAllEncompassed = trackAllEncompassed
         self.countAllEncompassed = countAllEncompassed
+        self.countOnlyNonEncompassed = countOnlyNonEncompassed
         self.countNonCountedEncompassedAsNegative = countNonCountedEncompassedAsNegative
         assert not self.countAllEncompassed or self.trackAllEncompassed, "All encompassed features cannot be counted if they aren't tracked."
         assert not self.countNonCountedEncompassedAsNegative or self.trackAllEncompassed, ("Can't count non-counted encompassed as negative "
                                                                                            "if they aren't tracked.")
+        assert not self.countOnlyNonEncompassed or self.trackAllEncompassed, ("Can't count only non-counted encompassed "
+                                                                              "if they aren't tracked.")
 
         self.outputDataStratifiers: List[OutputDataStratifier] = list() # The ODS's used to stratify the data.
         self.nontolerantAmbiguityHandling = False # To start, there is no non-tolerant ambiguity handling.
@@ -125,6 +128,14 @@ class CounterOutputDataHandler:
         Adds a layer onto the output data structure to stratify by the surrounding nucleotide context of the encompassed feature.
         """
         self.addNewStratifier(EncompassedFeatureContextODS(self.getNewStratificationLevelDictionaries(), outputName, contextSize, includeAlteredTo))
+
+
+    def addSimpleEncompassedColStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, 
+                                           outputName = "Some_Column_Or_Something_LOL", colIndex = 3):
+        """
+        Adds a stratification layer for unique strings found at a given column index for the encompassed features file.
+        """
+        self.addNewStratifier(SimpleEncompassedColStrODS(ambiguityHandling, self.getNewStratificationLevelDictionaries(), outputName, colIndex))
 
 
     def addSimpleEncompassingColStratifier(self, ambiguityHandling = AmbiguityHandling.tolerate, 
@@ -244,7 +255,7 @@ class CounterOutputDataHandler:
             for outputDataStratifier in self.outputDataStratifiers: 
                 outputDataStratifier.onNonCountedEncompassedFeature(encompassedFeature)
             if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
-            if self.countAllEncompassed: self.countFeature(encompassedFeature, encompassingFeature)
+            if self.countAllEncompassed or self.countOnlyNonEncompassed: self.countFeature(encompassedFeature, encompassingFeature)
             if self.countNonCountedEncompassedAsNegative: self.countFeature(encompassedFeature, encompassingFeature, -1)
 
 
@@ -341,7 +352,9 @@ class CounterOutputDataHandler:
 
         # If we don't have nontolerant ambiguity handling, and are not exiting encompassment, count the feature!
         # Otherwise, if we are exiting encompassment, check to see if we need to add this to the list of features to write.
-        if not self.nontolerantAmbiguityHandling: 
+        if not self.nontolerantAmbiguityHandling:
+            if self.countOnlyNonEncompassed: return
+            
             if not exitingEncompassment: self.countFeature(encompassedFeature, encompassingFeature)
             elif self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
 
@@ -354,7 +367,8 @@ class CounterOutputDataHandler:
             
             # If this feature should be ignored, pass it along as "non-counted".  Otherwise, count it!
             if ignoreFeature: self.onNonCountedEncompassedFeature(encompassedFeature, encompassingFeature)
-            else: 
+            else:
+                if self.countOnlyNonEncompassed: return
                 self.countFeature(encompassedFeature, encompassingFeature)
                 if self.encompassedFeaturesToWrite is not None: self.encompassedFeaturesToWrite.add(encompassedFeature)
 
