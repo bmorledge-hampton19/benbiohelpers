@@ -649,7 +649,7 @@ class TkinterDialog(tk.Frame):
 
         count = 0
         while line.startswith("Start_Sub_Dialog"):
-            self.subDialogs[count].saveSelections(selectionsStorageFile)
+            self.subDialogs[count].restoreSelections(selectionsStorageFile)
             line = selectionsStorageFile.readline().strip(); count += 1
 
         # Make sure we haven't ended prematurely.
